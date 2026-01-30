@@ -1,0 +1,49 @@
+datasource db {
+  provider = "sqlite"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Usuario {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  nombre    String?
+  rol       String   @default("SECRETARIO") 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Ciudadano {
+  id        String     @id @default(cuid())
+  cedula    String     @unique
+  nombres   String
+  vereda    String
+  telefono  String?
+  peticiones Peticion[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model Peticion {
+  id          String    @id @default(cuid())
+  asunto      String
+  descripcion String?
+  estado      String    @default("PENDIENTE") // PENDIENTE, EN_GESTION, CUMPLIDO
+  ciudadanoId String
+  ciudadano   Ciudadano @relation(fields: [ciudadanoId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Reunion {
+  id           String   @id @default(cuid())
+  titulo       String
+  fecha        DateTime
+  notas        String?  // Notas manuscritas / OCR
+  acta         String?  // Acta formal generada por IA
+  compromisos  String?  // Lista de compromisos detectados
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
