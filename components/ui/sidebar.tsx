@@ -26,13 +26,21 @@ export function Sidebar() {
     return (
         <div className="hidden border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 lg:flex lg:flex-col lg:w-72 h-screen flex-shrink-0 sticky top-0">
             <div className="p-6 border-b border-slate-200 dark:border-slate-800">
-                <Link href="/" className="flex items-center gap-2">
-                    <div className="h-8 w-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">
-                        G
+                <Link href="/" className="flex items-center gap-3">
+                    {/* Replaced placeholder G with Logo */}
+                    <img
+                        src="/logo.jpg"
+                        alt="GOVERNA Logo"
+                        className="h-10 w-auto object-contain rounded-md"
+                    />
+                    <div className="flex flex-col">
+                        <span className="text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight leading-none">
+                            GOVERNA
+                        </span>
+                        <span className="text-[10px] text-slate-500 font-medium tracking-wider uppercase">
+                            Linares Digital
+                        </span>
                     </div>
-                    <span className="text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-                        GOVERNA
-                    </span>
                 </Link>
             </div>
 
