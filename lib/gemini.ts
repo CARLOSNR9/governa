@@ -8,7 +8,7 @@ if (!apiKey) {
 
 const genAI = new GoogleGenerativeAI(apiKey || "INSERT_API_KEY_HERE");
 
-export const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+export const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 export async function generateContent(prompt: string) {
     try {
