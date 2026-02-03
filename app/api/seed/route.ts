@@ -4,8 +4,8 @@ import bcrypt from "bcryptjs";
 
 export async function GET() {
     try {
-        const email = "admin@governa.com";
-        const password = await bcrypt.hash("admin123", 10);
+        const email = "carlosnr9@gmail.com";
+        const password = await bcrypt.hash("Linares33*", 10);
 
         const user = await prisma.usuario.upsert({
             where: { email },
