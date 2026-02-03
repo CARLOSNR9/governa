@@ -29,7 +29,8 @@ export function MagicEditor() {
                 toast.error(response.error);
             } else {
                 setResult(response);
-                toast.success("¡Acta generada mágicamente!");
+                toast.success("¡Acta generada y guardada exitosamente!");
+                // Here we could redirect: router.push(/agenda/${response.id})
             }
         });
     }

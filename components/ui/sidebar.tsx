@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, PenTool, Users, Calendar, BarChart3, Settings } from "lucide-react";
+import { LayoutDashboard, PenTool, Users, Calendar, BarChart3, Settings, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface NavItem {
@@ -76,16 +76,27 @@ export function Sidebar() {
                 </nav>
             </div>
 
-            <div className="p-4 border-t border-slate-200 dark:border-slate-800">
+            <div className="p-4 border-t border-slate-200 dark:border-slate-800 space-y-2">
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-900">
                     <div className="h-10 w-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
                         <Settings className="h-5 w-5 text-slate-500" />
                     </div>
                     <div>
-                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Configuración</p>
-                        <p className="text-xs text-slate-500">v0.1.0 Beta</p>
+                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Administrador</p>
+                        <p className="text-xs text-slate-500">Sesión Activa</p>
                     </div>
                 </div>
+                <Button
+                    variant="outline"
+                    className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/10 border-red-100 dark:border-red-900/30"
+                    onClick={async () => {
+                        const { logout } = await import("@/lib/auth");
+                        await logout();
+                    }}
+                >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Cerrar Sesión
+                </Button>
             </div>
         </div>
     );

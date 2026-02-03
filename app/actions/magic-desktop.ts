@@ -1,6 +1,8 @@
 "use server";
 
 import { generateContent } from "@/lib/gemini";
+import prisma from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 
 export async function processNotes(formData: FormData) {
     const notes = formData.get("notes") as string;
@@ -37,10 +39,29 @@ export async function processNotes(formData: FormData) {
 
         // Limpiar response de posibles bloques de código markdown
         const cleanResponse = response.replace(/```json/g, "").replace(/```/g, "").trim();
+        const data = JSON.parse(cleanResponse);
 
-        return JSON.parse(cleanResponse);
+        // Guardar en Base de Datos
+        const nuevaReunion = await prisma.reunion.create({
+            data: {
+                titulo: data.titulo,
+                fecha: new Date(),
+                notas: notes, // Guardamos las notas originales
+                acta: data.acta,
+                compromisos: JSON.stringify(data.compromisos), // SQLite no tiene arrays nativos, guardamos como string JSON
+            }
+        });
+
+        revalidatePath("/agenda"); // Actualizar la vista de agenda si se muestra ahí
+
+        return {
+            success: true,
+            ...data,
+            id: nuevaReunion.id // Devolvemos el ID por si el front quiere redirigir
+        };
+
     } catch (error) {
         console.error("Error processing notes:", error);
-        return { error: "Error al procesar las notas." };
+        return { error: "Error al procesar las notas o guardar en base de datos." };
     }
 }

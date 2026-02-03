@@ -1,5 +1,5 @@
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -10,6 +10,7 @@ generator client {
 model Usuario {
   id        String   @id @default(cuid())
   email     String   @unique
+  password  String   // Hashed password
   nombre    String?
   rol       String   @default("SECRETARIO") 
   createdAt DateTime @default(now())
