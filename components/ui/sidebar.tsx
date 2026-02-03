@@ -90,7 +90,7 @@ export function Sidebar() {
                     variant="outline"
                     className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/10 border-red-100 dark:border-red-900/30"
                     onClick={async () => {
-                        const { logout } = await import("@/lib/auth");
+                        const { logout } = await import("@/app/actions/auth");
                         await logout();
                     }}
                 >
