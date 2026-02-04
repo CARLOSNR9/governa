@@ -5,9 +5,9 @@ import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { createMeeting, updateMeetingNotes, generateMeetingMinutes } from "@/app/actions/agenda";
+import { createMeeting, updateMeetingNotes, generateMeetingMinutes, deleteMeeting } from "@/app/actions/agenda";
 import { toast } from "sonner";
-import { Calendar as CalendarIcon, Clock, Plus, Lightbulb, FileText, Bot, Save, CheckCircle2 } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Plus, Lightbulb, FileText, Bot, Save, CheckCircle2, Trash2, AlertTriangle } from "lucide-react";
 import { es } from "date-fns/locale";
 import {
     Dialog,
@@ -44,6 +44,8 @@ export function AgendaView({ initialMeetings, moralSupport }: AgendaViewProps) {
     const [notes, setNotes] = useState("");
     const [isSavingNotes, setIsSavingNotes] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     // Filter meetings
     const selectedDateMeetings = meetings.filter(m =>
@@ -54,6 +56,7 @@ export function AgendaView({ initialMeetings, moralSupport }: AgendaViewProps) {
     useEffect(() => {
         if (selectedMeeting) {
             setNotes(selectedMeeting.notas || "");
+            setShowDeleteConfirm(false); // Reset confirm state
         }
     }, [selectedMeeting]);
 
@@ -74,7 +77,6 @@ export function AgendaView({ initialMeetings, moralSupport }: AgendaViewProps) {
         const result = await updateMeetingNotes(selectedMeeting.id, notes);
         if (result.success) {
             toast.success("Notas guardadas correctamente");
-            // Update local state
             setMeetings(meetings.map(m => m.id === selectedMeeting.id ? { ...m, notas: notes } : m));
             setSelectedMeeting({ ...selectedMeeting, notas: notes });
         } else {
@@ -92,11 +94,27 @@ export function AgendaView({ initialMeetings, moralSupport }: AgendaViewProps) {
 
         if (result.success) {
             toast.success("¡Acta generada exitosamente!");
-            window.location.reload(); // Reload to get full data (or optimistically update ideally)
+            window.location.reload();
         } else {
             toast.error(result.error);
         }
         setIsGenerating(false);
+    }
+
+    async function handleDeleteMeeting() {
+        if (!selectedMeeting) return;
+        setIsDeleting(true);
+        const result = await deleteMeeting(selectedMeeting.id);
+
+        if (result.success) {
+            toast.success(result.message);
+            setSelectedMeeting(null);
+            // Optimistic update
+            setMeetings(meetings.filter(m => m.id !== selectedMeeting.id));
+        } else {
+            toast.error(result.error);
+        }
+        setIsDeleting(false);
     }
 
     return (
@@ -254,7 +272,10 @@ export function AgendaView({ initialMeetings, moralSupport }: AgendaViewProps) {
                                 <Badge className="w-fit mb-2 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border-none">
                                     {new Date(selectedMeeting.fecha).toLocaleDateString("es-CO", { weekday: 'long', day: 'numeric', month: 'long' })}
                                 </Badge>
-                                <SheetTitle className="text-2xl">{selectedMeeting.titulo}</SheetTitle>
+                                <div className="flex justify-between items-start gap-4">
+                                    <SheetTitle className="text-2xl">{selectedMeeting.titulo}</SheetTitle>
+
+                                </div>
                                 <SheetDescription>
                                     Gestiona los detalles, notas y actas de esta reunión.
                                 </SheetDescription>
@@ -325,6 +346,47 @@ export function AgendaView({ initialMeetings, moralSupport }: AgendaViewProps) {
                                         )}
                                     </div>
                                 )}
+
+                                {/* Delete Zone */}
+                                <div className="pt-6 mt-6 border-t border-slate-200 dark:border-slate-800">
+                                    {!showDeleteConfirm ? (
+                                        <Button
+                                            variant="ghost"
+                                            className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
+                                            onClick={() => setShowDeleteConfirm(true)}
+                                        >
+                                            <Trash2 className="w-4 h-4 mr-2" />
+                                            Eliminar Reunión
+                                        </Button>
+                                    ) : (
+                                        <div className="p-4 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-100 dark:border-red-900 flex flex-col gap-3">
+                                            <div className="flex items-center gap-2 text-red-800 dark:text-red-200 font-medium text-sm">
+                                                <AlertTriangle className="w-4 h-4" />
+                                                ¿Estás seguro de eliminar esta reunión?
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <Button
+                                                    variant="destructive"
+                                                    size="sm"
+                                                    className="flex-1"
+                                                    onClick={handleDeleteMeeting}
+                                                    disabled={isDeleting}
+                                                >
+                                                    {isDeleting ? "Eliminando..." : "Sí, Eliminar"}
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="flex-1"
+                                                    onClick={() => setShowDeleteConfirm(false)}
+                                                    disabled={isDeleting}
+                                                >
+                                                    Cancelar
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </>
                     )}

@@ -180,3 +180,16 @@ export async function generateMeetingMinutes(meetingId: string) {
         return { success: false, error: "Error al generar el acta." };
     }
 }
+
+export async function deleteMeeting(meetingId: string) {
+    try {
+        await prisma.reunion.delete({
+            where: { id: meetingId },
+        });
+        revalidatePath("/agenda");
+        return { success: true, message: "Reunión eliminada correctamente." };
+    } catch (error) {
+        console.error("Error deleting meeting:", error);
+        return { error: "Error al eliminar la reunión." };
+    }
+}
