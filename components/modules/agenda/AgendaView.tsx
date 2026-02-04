@@ -116,6 +116,12 @@ export function AgendaView({ initialMeetings, moralSupport }: AgendaViewProps) {
                             onSelect={setDate}
                             className="rounded-md border shadow p-4"
                             locale={es}
+                            modifiers={{
+                                hasMeeting: (d) => meetings.some(m => new Date(m.fecha).toDateString() === d.toDateString())
+                            }}
+                            modifiersClassNames={{
+                                hasMeeting: "bg-indigo-100 text-indigo-900 font-bold hover:bg-indigo-200 cursor-pointer"
+                            }}
                         />
                     </CardContent>
                 </Card>

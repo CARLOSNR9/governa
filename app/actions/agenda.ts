@@ -19,7 +19,7 @@ export async function getUpcomingMeetings() {
             orderBy: {
                 fecha: "asc",
             },
-            take: 10,
+            take: 100,
         });
         return meetings;
     } catch (error) {
