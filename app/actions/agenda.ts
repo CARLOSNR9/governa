@@ -59,18 +59,124 @@ export async function createMeeting(formData: FormData) {
 }
 
 export async function getMoralSupport() {
-    // Mock "Ayuda Moral" / Contextual Intelligence
-    // In a real app, this would check previous meetings with similar topics or people
-    return [
-        {
-            tipo: "recordatorio",
-            mensaje: "No olvides mencionar el tema de las vías en la reunión con Infraestructura.",
-            prioridad: "alta"
-        },
-        {
-            tipo: "contexto",
-            mensaje: "La última vez que te reuniste con el Alcalde, quedó pendiente el presupuesto de Cultura.",
-            prioridad: "media"
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Fetch today's meetings to give context
+        const meetings = await prisma.reunion.findMany({
+            where: {
+                fecha: {
+                    gte: today,
+                    lt: new Date(today.getTime() + 24 * 60 * 60 * 1000), // End of today
+                },
+            },
+            select: { titulo: true, fecha: true },
+        });
+
+        if (meetings.length === 0) {
+            return [{
+                tipo: "general",
+                mensaje: "Hoy no tienes reuniones programadas. Es un buen día para avanzar en tareas administrativas pendientes o revisar la planificación semanal.",
+                prioridad: "baja"
+            }];
         }
-    ];
+
+        // Construct prompt for Gemini
+        const meetingsList = meetings.map(m => `- ${m.titulo} a las ${m.fecha.toLocaleTimeString()}`).join("\n");
+        const prompt = `
+        Eres un asesor político y personal experto para un gobernante. Basado en la siguiente agenda del día:
+        ${meetingsList}
+
+        Genera 2 o 3 consejos breves, estratégicos o de "ayuda moral" para afrontar el día.
+        Pueden ser recordatorios de tacto político, preparación mental, o puntos clave a no olvidar.
+        
+        Devuelve la respuesta en formato JSON puramente, un array de objetos con esta estructura:
+        [
+            { "tipo": "consejo" | "advertencia" | "estrategia", "mensaje": "texto del consejo", "prioridad": "alta" | "media" | "baja" }
+        ]
+        `;
+
+        const { generateContent } = await import("@/lib/gemini");
+        const responseText = await generateContent(prompt);
+
+        if (!responseText) return [];
+
+        const cleanResponse = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
+        return JSON.parse(cleanResponse);
+
+    } catch (error) {
+        console.error("Error generating moral support:", error);
+        // Fallback static support if AI fails
+        return [
+            {
+                tipo: "error",
+                mensaje: "El sistema de inteligencia está calibrando sus sensores. Recuerda mantener la calma y escuchar activamente en todas tus reuniones.",
+                prioridad: "media"
+            }
+        ];
+    }
+}
+
+export async function updateMeetingNotes(meetingId: string, notes: string) {
+    try {
+        await prisma.reunion.update({
+            where: { id: meetingId },
+            data: { notas: notes },
+        });
+        revalidatePath("/agenda");
+        return { success: true };
+    } catch (error) {
+        console.error("Error updating notes:", error);
+        return { success: false, error: "Error al guardar las notas." };
+    }
+}
+
+export async function generateMeetingMinutes(meetingId: string) {
+    try {
+        const meeting = await prisma.reunion.findUnique({
+            where: { id: meetingId },
+        });
+
+        if (!meeting || !meeting.notas) {
+            return { success: false, error: "No hay notas para procesar." };
+        }
+
+        const prompt = `
+        Genera un Acta de Reunión formal y una lista de Compromisos basada en estas notas crudas de la reunión "${meeting.titulo}":
+        
+        "${meeting.notas}"
+
+        Devuelve un objeto JSON con:
+        {
+            "acta": "Texto redactado formalmente del acta...",
+            "compromisos": ["Compromiso 1", "Compromiso 2", ...]
+        }
+        `;
+
+        const { generateContent } = await import("@/lib/gemini");
+        const responseText = await generateContent(prompt);
+
+        if (!responseText) {
+            return { success: false, error: "No se pudo generar el acta." };
+        }
+
+        const cleanResponse = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
+        const data = JSON.parse(cleanResponse);
+
+        await prisma.reunion.update({
+            where: { id: meetingId },
+            data: {
+                acta: data.acta,
+                compromisos: JSON.stringify(data.compromisos),
+            },
+        });
+
+        revalidatePath("/agenda");
+        return { success: true };
+
+    } catch (error) {
+        console.error("Error generating minutes:", error);
+        return { success: false, error: "Error al generar el acta." };
+    }
 }
