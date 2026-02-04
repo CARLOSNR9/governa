@@ -7,13 +7,14 @@ import { revalidatePath } from "next/cache";
 
 export async function getUpcomingMeetings() {
     try {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        // Allow fetching meetings from Feb 1, 2026 as per user request
+        const startDate = new Date(2026, 1, 1); // Month is 0-indexed (1 = February)
+        startDate.setHours(0, 0, 0, 0);
 
         const meetings = await prisma.reunion.findMany({
             where: {
                 fecha: {
-                    gte: today, // Future or today meetings
+                    gte: startDate,
                 },
             },
             orderBy: {
