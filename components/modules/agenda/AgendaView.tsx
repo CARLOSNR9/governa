@@ -53,6 +53,21 @@ export function AgendaView({ initialMeetings, moralSupport }: AgendaViewProps) {
         date && new Date(m.fecha).toDateString() === date.toDateString()
     );
 
+    // Helpers for local input formatting
+    const formatDateForInput = (d: Date | string | undefined) => {
+        if (!d) return "";
+        const dateObj = typeof d === 'string' ? new Date(d) : d;
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const formatTimeForInput = (d: Date | string) => {
+        const dateObj = typeof d === 'string' ? new Date(d) : d;
+        return dateObj.toLocaleTimeString("es-CO", { hour: '2-digit', minute: '2-digit', hour12: false });
+    };
+
     // Initialize notes when a meeting is selected
     useEffect(() => {
         if (selectedMeeting) {
@@ -218,7 +233,7 @@ export function AgendaView({ initialMeetings, moralSupport }: AgendaViewProps) {
                                         </div>
                                         <div className="grid grid-cols-4 items-center gap-4">
                                             <Label htmlFor="fecha" className="text-right">Fecha</Label>
-                                            <Input id="fecha" name="fecha" type="date" defaultValue={date?.toISOString().split('T')[0]} className="col-span-3" required />
+                                            <Input id="fecha" name="fecha" type="date" defaultValue={formatDateForInput(date)} className="col-span-3" required />
                                         </div>
                                         <div className="grid grid-cols-4 items-center gap-4">
                                             <Label htmlFor="hora" className="text-right">Hora</Label>
@@ -307,11 +322,11 @@ export function AgendaView({ initialMeetings, moralSupport }: AgendaViewProps) {
                                                     </div>
                                                     <div className="grid grid-cols-4 items-center gap-4">
                                                         <Label htmlFor="edit-fecha" className="text-right">Fecha</Label>
-                                                        <Input id="edit-fecha" name="fecha" type="date" defaultValue={new Date(selectedMeeting.fecha).toISOString().split('T')[0]} className="col-span-3" required />
+                                                        <Input id="edit-fecha" name="fecha" type="date" defaultValue={formatDateForInput(selectedMeeting.fecha)} className="col-span-3" required />
                                                     </div>
                                                     <div className="grid grid-cols-4 items-center gap-4">
                                                         <Label htmlFor="edit-hora" className="text-right">Hora</Label>
-                                                        <Input id="edit-hora" name="hora" type="time" defaultValue={new Date(selectedMeeting.fecha).toLocaleTimeString("es-CO", { hour: '2-digit', minute: '2-digit', hour12: false })} className="col-span-3" required />
+                                                        <Input id="edit-hora" name="hora" type="time" defaultValue={formatTimeForInput(selectedMeeting.fecha)} className="col-span-3" required />
                                                     </div>
                                                 </div>
                                                 <DialogFooter>
