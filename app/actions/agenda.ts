@@ -42,7 +42,11 @@ export async function createMeeting(formData: FormData) {
         // Combine date and time
         const [year, month, day] = fechaStr.split("-").map(Number);
         const [hours, minutes] = horaStr.split(":").map(Number);
-        const fecha = new Date(year, month - 1, day, hours, minutes);
+
+        // Force GMT-5 (Colombia time) construction to avoid server timezone issues
+        // Create an ISO string: YYYY-MM-DDTHH:mm:00-05:00
+        const isoString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00-05:00`;
+        const fecha = new Date(isoString);
 
         await prisma.reunion.create({
             data: {
@@ -209,7 +213,11 @@ export async function updateMeeting(formData: FormData) {
         // Combine date and time
         const [year, month, day] = fechaStr.split("-").map(Number);
         const [hours, minutes] = horaStr.split(":").map(Number);
-        const fecha = new Date(year, month - 1, day, hours, minutes);
+
+        // Force GMT-5 (Colombia time) construction to avoid server timezone issues
+        // Create an ISO string: YYYY-MM-DDTHH:mm:00-05:00
+        const isoString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00-05:00`;
+        const fecha = new Date(isoString);
 
         await prisma.reunion.update({
             where: { id },

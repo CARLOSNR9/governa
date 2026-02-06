@@ -65,7 +65,9 @@ export function AgendaView({ initialMeetings, moralSupport }: AgendaViewProps) {
 
     const formatTimeForInput = (d: Date | string) => {
         const dateObj = typeof d === 'string' ? new Date(d) : d;
-        return dateObj.toLocaleTimeString("es-CO", { hour: '2-digit', minute: '2-digit', hour12: false });
+        const hours = String(dateObj.getHours()).padStart(2, '0');
+        const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+        return `${hours}:${minutes}`;
     };
 
     // Initialize notes when a meeting is selected
