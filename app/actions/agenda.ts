@@ -110,13 +110,16 @@ export async function getMoralSupport() {
         const cleanResponse = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
         return JSON.parse(cleanResponse);
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error generating moral support:", error);
-        // Fallback static support if AI fails
+        // Fallback static support if AI fails or rate limited
+        const isRateLimited = error.status === 429 || error.message?.includes("429");
         return [
             {
                 tipo: "error",
-                mensaje: "El sistema de inteligencia está calibrando sus sensores. Recuerda mantener la calma y escuchar activamente en todas tus reuniones.",
+                mensaje: isRateLimited
+                    ? "La IA está descansando un momento (Límite de cuota alcanzado). Intenta más tarde."
+                    : "El sistema de inteligencia está calibrando sus sensores. Recuerda mantener la calma y escuchar activamente en todas tus reuniones.",
                 prioridad: "media"
             }
         ];
@@ -160,7 +163,15 @@ export async function generateMeetingMinutes(meetingId: string) {
         `;
 
         const { generateContent } = await import("@/lib/gemini");
-        const responseText = await generateContent(prompt);
+        let responseText;
+        try {
+            responseText = await generateContent(prompt);
+        } catch (error: any) {
+            if (error.status === 429 || error.message?.includes("429")) {
+                return { success: false, error: "El sistema de IA está saturado. Por favor, intenta de nuevo en 1 minuto." };
+            }
+            throw error;
+        }
 
         if (!responseText) {
             return { success: false, error: "No se pudo generar el acta." };

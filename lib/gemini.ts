@@ -17,6 +17,6 @@ export async function generateContent(prompt: string) {
         return response.text();
     } catch (error) {
         console.error("Error connecting to Gemini:", error);
-        return null;
+        throw error; // Propagate error to be handled by caller
     }
 }
