@@ -5,9 +5,9 @@ import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { createMeeting, updateMeetingNotes, generateMeetingMinutes, deleteMeeting } from "@/app/actions/agenda";
+import { createMeeting, updateMeetingNotes, generateMeetingMinutes, deleteMeeting, updateMeeting } from "@/app/actions/agenda";
 import { toast } from "sonner";
-import { Calendar as CalendarIcon, Clock, Plus, Lightbulb, FileText, Bot, Save, CheckCircle2, Trash2, AlertTriangle } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Plus, Lightbulb, FileText, Bot, Save, CheckCircle2, Trash2, AlertTriangle, Edit } from "lucide-react";
 import { es } from "date-fns/locale";
 import {
     Dialog,
@@ -41,6 +41,7 @@ export function AgendaView({ initialMeetings, moralSupport }: AgendaViewProps) {
 
     // Detailed View State
     const [selectedMeeting, setSelectedMeeting] = useState<any | null>(null);
+    const [isEditOpen, setIsEditOpen] = useState(false);
     const [notes, setNotes] = useState("");
     const [isSavingNotes, setIsSavingNotes] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -65,6 +66,17 @@ export function AgendaView({ initialMeetings, moralSupport }: AgendaViewProps) {
         if (result.success) {
             toast.success(result.message);
             setIsDialogOpen(false);
+            window.location.reload();
+        } else {
+            toast.error(result.error);
+        }
+    }
+
+    async function handleUpdateMeeting(formData: FormData) {
+        const result = await updateMeeting(formData);
+        if (result.success) {
+            toast.success(result.message);
+            setIsEditOpen(false);
             window.location.reload();
         } else {
             toast.error(result.error);
@@ -274,7 +286,40 @@ export function AgendaView({ initialMeetings, moralSupport }: AgendaViewProps) {
                                 </Badge>
                                 <div className="flex justify-between items-start gap-4">
                                     <SheetTitle className="text-2xl">{selectedMeeting.titulo}</SheetTitle>
-
+                                    <Button variant="outline" size="sm" onClick={() => setIsEditOpen(true)}>
+                                        <Edit className="w-4 h-4 mr-2" />
+                                        Editar
+                                    </Button>
+                                    <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+                                        <DialogContent>
+                                            <DialogHeader>
+                                                <DialogTitle>Editar Reunión</DialogTitle>
+                                                <DialogDescription>
+                                                    Modifica los detalles de la reunión.
+                                                </DialogDescription>
+                                            </DialogHeader>
+                                            <form action={handleUpdateMeeting}>
+                                                <input type="hidden" name="id" value={selectedMeeting.id} />
+                                                <div className="grid gap-4 py-4">
+                                                    <div className="grid grid-cols-4 items-center gap-4">
+                                                        <Label htmlFor="edit-titulo" className="text-right">Título</Label>
+                                                        <Input id="edit-titulo" name="titulo" defaultValue={selectedMeeting.titulo} className="col-span-3" required />
+                                                    </div>
+                                                    <div className="grid grid-cols-4 items-center gap-4">
+                                                        <Label htmlFor="edit-fecha" className="text-right">Fecha</Label>
+                                                        <Input id="edit-fecha" name="fecha" type="date" defaultValue={new Date(selectedMeeting.fecha).toISOString().split('T')[0]} className="col-span-3" required />
+                                                    </div>
+                                                    <div className="grid grid-cols-4 items-center gap-4">
+                                                        <Label htmlFor="edit-hora" className="text-right">Hora</Label>
+                                                        <Input id="edit-hora" name="hora" type="time" defaultValue={new Date(selectedMeeting.fecha).toLocaleTimeString("es-CO", { hour: '2-digit', minute: '2-digit', hour12: false })} className="col-span-3" required />
+                                                    </div>
+                                                </div>
+                                                <DialogFooter>
+                                                    <Button type="submit">Actualizar</Button>
+                                                </DialogFooter>
+                                            </form>
+                                        </DialogContent>
+                                    </Dialog>
                                 </div>
                                 <SheetDescription>
                                     Gestiona los detalles, notas y actas de esta reunión.

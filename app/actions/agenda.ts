@@ -194,3 +194,35 @@ export async function deleteMeeting(meetingId: string) {
         return { error: "Error al eliminar la reunión." };
     }
 }
+
+export async function updateMeeting(formData: FormData) {
+    const id = formData.get("id") as string;
+    const titulo = formData.get("titulo") as string;
+    const fechaStr = formData.get("fecha") as string;
+    const horaStr = formData.get("hora") as string;
+
+    if (!id || !titulo || !fechaStr || !horaStr) {
+        return { error: "Todos los campos son obligatorios" };
+    }
+
+    try {
+        // Combine date and time
+        const [year, month, day] = fechaStr.split("-").map(Number);
+        const [hours, minutes] = horaStr.split(":").map(Number);
+        const fecha = new Date(year, month - 1, day, hours, minutes);
+
+        await prisma.reunion.update({
+            where: { id },
+            data: {
+                titulo,
+                fecha,
+            },
+        });
+
+        revalidatePath("/agenda");
+        return { success: true, message: "Reunión actualizada exitosamente." };
+    } catch (error) {
+        console.error("Error updating meeting:", error);
+        return { error: "Error al actualizar la reunión." };
+    }
+}
