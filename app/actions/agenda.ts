@@ -21,6 +21,11 @@ export async function getUpcomingMeetings() {
                 fecha: "asc",
             },
             take: 100,
+            include: {
+                tareas: {
+                    orderBy: { createdAt: 'asc' }
+                }
+            }
         });
         return meetings;
     } catch (error) {
@@ -140,60 +145,46 @@ export async function updateMeetingNotes(meetingId: string, notes: string) {
     }
 }
 
-export async function generateMeetingMinutes(meetingId: string) {
+export async function addMeetingTask(meetingId: string, descripcion: string) {
     try {
-        const meeting = await prisma.reunion.findUnique({
-            where: { id: meetingId },
-        });
-
-        if (!meeting || !meeting.notas) {
-            return { success: false, error: "No hay notas para procesar." };
-        }
-
-        const prompt = `
-        Genera un Acta de Reunión formal y una lista de Compromisos basada en estas notas crudas de la reunión "${meeting.titulo}":
-        
-        "${meeting.notas}"
-
-        Devuelve un objeto JSON con:
-        {
-            "acta": "Texto redactado formalmente del acta...",
-            "compromisos": ["Compromiso 1", "Compromiso 2", ...]
-        }
-        `;
-
-        const { generateContent } = await import("@/lib/gemini");
-        let responseText;
-        try {
-            responseText = await generateContent(prompt);
-        } catch (error: any) {
-            if (error.status === 429 || error.message?.includes("429")) {
-                return { success: false, error: "El sistema de IA está saturado. Por favor, intenta de nuevo en 1 minuto." };
-            }
-            throw error;
-        }
-
-        if (!responseText) {
-            return { success: false, error: "No se pudo generar el acta." };
-        }
-
-        const cleanResponse = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
-        const data = JSON.parse(cleanResponse);
-
-        await prisma.reunion.update({
-            where: { id: meetingId },
+        const tarea = await prisma.tarea.create({
             data: {
-                acta: data.acta,
-                compromisos: JSON.stringify(data.compromisos),
-            },
+                descripcion,
+                reunionId: meetingId,
+            }
         });
+        revalidatePath("/agenda");
+        return { success: true, tarea };
+    } catch (error) {
+        console.error("Error adding task:", error);
+        return { success: false, error: "Error al crear la tarea." };
+    }
+}
 
+export async function toggleMeetingTask(taskId: string, completado: boolean) {
+    try {
+        await prisma.tarea.update({
+            where: { id: taskId },
+            data: { completado }
+        });
         revalidatePath("/agenda");
         return { success: true };
-
     } catch (error) {
-        console.error("Error generating minutes:", error);
-        return { success: false, error: "Error al generar el acta." };
+        console.error("Error toggling task:", error);
+        return { success: false, error: "Error al actualizar la tarea." };
+    }
+}
+
+export async function deleteMeetingTask(taskId: string) {
+    try {
+        await prisma.tarea.delete({
+            where: { id: taskId }
+        });
+        revalidatePath("/agenda");
+        return { success: true };
+    } catch (error) {
+        console.error("Error deleting task:", error);
+        return { success: false, error: "Error al eliminar la tarea." };
     }
 }
 

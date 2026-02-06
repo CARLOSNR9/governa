@@ -46,6 +46,17 @@ model Reunion {
   notas        String?  // Notas manuscritas / OCR
   acta         String?  // Acta formal generada por IA
   compromisos  String?  // Lista de compromisos detectados
+  tareas       Tarea[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+model Tarea {
+  id          String   @id @default(cuid())
+  descripcion String
+  completado  Boolean  @default(false)
+  reunionId   String
+  reunion     Reunion  @relation(fields: [reunionId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

@@ -5,9 +5,9 @@ import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { createMeeting, updateMeetingNotes, generateMeetingMinutes, deleteMeeting, updateMeeting } from "@/app/actions/agenda";
+import { createMeeting, updateMeetingNotes, addMeetingTask, toggleMeetingTask, deleteMeetingTask, deleteMeeting, updateMeeting } from "@/app/actions/agenda";
 import { toast } from "sonner";
-import { Calendar as CalendarIcon, Clock, Plus, Lightbulb, FileText, Bot, Save, CheckCircle2, Trash2, AlertTriangle, Edit } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Plus, Lightbulb, FileText, Save, CheckCircle2, Trash2, AlertTriangle, Edit, Square, CheckSquare } from "lucide-react";
 import { es } from "date-fns/locale";
 import {
     Dialog,
@@ -43,8 +43,8 @@ export function AgendaView({ initialMeetings, moralSupport }: AgendaViewProps) {
     const [selectedMeeting, setSelectedMeeting] = useState<any | null>(null);
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [notes, setNotes] = useState("");
+    const [newTask, setNewTask] = useState("");
     const [isSavingNotes, setIsSavingNotes] = useState(false);
-    const [isGenerating, setIsGenerating] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -114,20 +114,57 @@ export function AgendaView({ initialMeetings, moralSupport }: AgendaViewProps) {
         setIsSavingNotes(false);
     }
 
-    async function handleGenerateMinutes() {
-        if (!selectedMeeting) return;
-        setIsGenerating(true);
-        toast.info("Generando acta con IA... esto puede tardar unos segundos.");
+    async function handleAddTask(e: React.FormEvent) {
+        e.preventDefault();
+        if (!selectedMeeting || !newTask.trim()) return;
 
-        const result = await generateMeetingMinutes(selectedMeeting.id);
-
+        const result = await addMeetingTask(selectedMeeting.id, newTask);
         if (result.success) {
-            toast.success("¡Acta generada exitosamente!");
-            window.location.reload();
+            const updatedMeeting = {
+                ...selectedMeeting,
+                tareas: [...(selectedMeeting.tareas || []), result.tarea]
+            };
+            setSelectedMeeting(updatedMeeting);
+            setMeetings(meetings.map(m => m.id === selectedMeeting.id ? updatedMeeting : m));
+            setNewTask("");
+            toast.success("Tarea agregada");
         } else {
             toast.error(result.error);
         }
-        setIsGenerating(false);
+    }
+
+    async function handleToggleTask(taskId: string, currentStatus: boolean) {
+        if (!selectedMeeting) return;
+
+        // Optimistic update
+        const updatedTasks = selectedMeeting.tareas.map((t: any) =>
+            t.id === taskId ? { ...t, completado: !currentStatus } : t
+        );
+        const updatedMeeting = { ...selectedMeeting, tareas: updatedTasks };
+
+        setSelectedMeeting(updatedMeeting);
+        setMeetings(meetings.map(m => m.id === selectedMeeting.id ? updatedMeeting : m));
+
+        const result = await toggleMeetingTask(taskId, !currentStatus);
+        if (!result.success) {
+            toast.error("Error al actualizar la tarea");
+            // Revert on failure (could be improved)
+        }
+    }
+
+    async function handleDeleteTask(taskId: string) {
+        if (!selectedMeeting) return;
+
+        const updatedTasks = selectedMeeting.tareas.filter((t: any) => t.id !== taskId);
+        const updatedMeeting = { ...selectedMeeting, tareas: updatedTasks };
+
+        setSelectedMeeting(updatedMeeting);
+        setMeetings(meetings.map(m => m.id === selectedMeeting.id ? updatedMeeting : m));
+
+        const result = await deleteMeetingTask(taskId);
+        if (!result.success) {
+            toast.error("Error al eliminar la tarea");
+        }
     }
 
     async function handleDeleteMeeting() {
@@ -366,48 +403,68 @@ export function AgendaView({ initialMeetings, moralSupport }: AgendaViewProps) {
                                     </p>
                                 </div>
 
-                                {/* AI Action Section */}
-                                <div className="p-4 bg-indigo-50 dark:bg-indigo-950/20 rounded-xl border border-indigo-100 dark:border-indigo-900/50">
-                                    <h4 className="font-semibold text-indigo-900 dark:text-indigo-100 mb-2 flex items-center gap-2">
-                                        <Bot className="w-5 h-5" /> Generador de Actas IA
-                                    </h4>
-                                    <p className="text-sm text-indigo-700 dark:text-indigo-300 mb-4">
-                                        Transforma tus notas en un documento formal con compromisos detectados automáticamente.
-                                    </p>
-                                    <Button
-                                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
-                                        onClick={handleGenerateMinutes}
-                                        disabled={!notes || isGenerating}
-                                    >
-                                        {isGenerating ? "Generando Documento..." : "Generar Acta Formal"}
-                                    </Button>
-                                </div>
+                                {/* Task Manager Section */}
+                                <div className="space-y-4 pt-4 border-t border-indigo-100 dark:border-indigo-900/50">
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="font-semibold text-lg flex items-center gap-2 text-indigo-900 dark:text-indigo-100">
+                                            <CheckSquare className="w-5 h-5" /> Pendientes
+                                        </h4>
+                                        <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">
+                                            {selectedMeeting.tareas?.filter((t: any) => !t.completado).length || 0} pendientes
+                                        </Badge>
+                                    </div>
 
-                                {/* Generated Minutes Display */}
-                                {selectedMeeting.acta && (
-                                    <div className="space-y-4 pt-4 border-t">
-                                        <div>
-                                            <h3 className="font-semibold text-lg mb-2">Acta Oficial</h3>
-                                            <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-lg border text-sm whitespace-pre-wrap leading-relaxed text-slate-700 dark:text-slate-300">
-                                                {selectedMeeting.acta}
-                                            </div>
-                                        </div>
+                                    {/* Add Task Form */}
+                                    <form onSubmit={handleAddTask} className="flex gap-2">
+                                        <Input
+                                            placeholder="Agregar nueva tarea..."
+                                            value={newTask}
+                                            onChange={(e) => setNewTask(e.target.value)}
+                                            className="flex-1"
+                                        />
+                                        <Button type="submit" size="sm" disabled={!newTask.trim()}>
+                                            <Plus className="w-4 h-4" />
+                                        </Button>
+                                    </form>
 
-                                        {selectedMeeting.compromisos && (
-                                            <div>
-                                                <h3 className="font-semibold text-lg mb-2">Compromisos Detectados</h3>
-                                                <ul className="space-y-2">
-                                                    {JSON.parse(selectedMeeting.compromisos).map((comp: string, i: number) => (
-                                                        <li key={i} className="flex items-start gap-2 text-sm p-3 bg-green-50 dark:bg-green-950/20 rounded border border-green-100 dark:border-green-900">
-                                                            <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5" />
-                                                            <span className="text-green-800 dark:text-green-200">{comp}</span>
-                                                        </li>
-                                                    ))}
-                                                </ul>
+                                    {/* Task List */}
+                                    <div className="space-y-2">
+                                        {selectedMeeting.tareas?.length > 0 ? (
+                                            selectedMeeting.tareas.map((task: any) => (
+                                                <div
+                                                    key={task.id}
+                                                    className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${task.completado
+                                                            ? "bg-slate-50 border-slate-100 text-slate-400 dark:bg-slate-900/50 dark:border-slate-800"
+                                                            : "bg-white border-slate-200 text-slate-700 dark:bg-slate-950 dark:border-slate-800"
+                                                        }`}
+                                                >
+                                                    <button
+                                                        onClick={() => handleToggleTask(task.id, task.completado)}
+                                                        className={`flex-shrink-0 transition-colors ${task.completado ? "text-slate-400" : "text-indigo-600 hover:text-indigo-700"
+                                                            }`}
+                                                    >
+                                                        {task.completado ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
+                                                    </button>
+
+                                                    <span className={`flex-1 text-sm ${task.completado ? "line-through" : ""}`}>
+                                                        {task.descripcion}
+                                                    </span>
+
+                                                    <button
+                                                        onClick={() => handleDeleteTask(task.id)}
+                                                        className="text-slate-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="text-center py-6 text-slate-400 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-dashed">
+                                                <p className="text-sm">No hay tareas pendientes</p>
                                             </div>
                                         )}
                                     </div>
-                                )}
+                                </div>
 
                                 {/* Delete Zone */}
                                 <div className="pt-6 mt-6 border-t border-slate-200 dark:border-slate-800">
