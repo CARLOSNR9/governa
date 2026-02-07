@@ -12,13 +12,29 @@ import { Loader2, UserPlus, MapPin } from "lucide-react";
 
 const VEREDAS = [
     "Casco Urbano",
-    "El Bosque",
+    "Balsal",
+    "Bella Florida",
+    "Bellavista",
+    "El Guaitara",
+    "Higueronal",
+    "La Arboleda",
+    "La Ensillada",
+    "La Mina",
     "La Palma",
+    "La Tola",
+    "Laguna del Pueblo",
+    "Las Dosquebradas",
+    "Llanogrande Alto",
+    "Llanogrande Bajo",
+    "Nachao",
+    "Poroto",
+    "Pozuelos",
+    "San Antonio",
     "San Francisco",
-    "Santa Rosa",
-    "Bella Vista",
-    "El Carmen",
-    "Los Andes"
+    "Tabiles",
+    "Tambillo de Acostas",
+    "Tambillo de Bravos",
+    "Vendeahuja"
 ];
 
 export function CitizenRegistrationForm() {

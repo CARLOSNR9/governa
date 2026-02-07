@@ -129,3 +129,45 @@ export async function getStats() {
         };
     }
 }
+
+export async function updateCitizen(formData: FormData) {
+    const id = formData.get("id") as string;
+    const nombres = formData.get("nombres") as string;
+    const vereda = formData.get("vereda") as string;
+    const telefono = formData.get("telefono") as string;
+
+    if (!id || !nombres || !vereda) {
+        return { error: "Faltan datos requeridos" };
+    }
+
+    try {
+        await prisma.ciudadano.update({
+            where: { id },
+            data: {
+                nombres,
+                vereda,
+                telefono
+            }
+        });
+        revalidatePath("/crm");
+        return { success: true, message: "Ciudadano actualizado correctamente" };
+    } catch (error) {
+        console.error("Error updating citizen:", error);
+        return { error: "Error al actualizar ciudadano" };
+    }
+}
+
+export async function deleteCitizen(id: string) {
+    if (!id) return { error: "ID requerido" };
+
+    try {
+        await prisma.ciudadano.delete({
+            where: { id }
+        });
+        revalidatePath("/crm");
+        return { success: true, message: "Ciudadano eliminado correctamente" };
+    } catch (error) {
+        console.error("Error deleting citizen:", error);
+        return { error: "Error al eliminar ciudadano" };
+    }
+}

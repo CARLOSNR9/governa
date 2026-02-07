@@ -4,10 +4,12 @@ import { CitizenRegistrationForm } from "@/components/modules/crm/CitizenRegistr
 import { StatsOverview } from "@/components/modules/crm/StatsOverview";
 
 export default async function CrmPage() {
-    const [citizens, stats] = await Promise.all([
+    const [citizensRaw, stats] = await Promise.all([
         getRecentCitizens(),
         getStats()
     ]);
+
+    const citizens = JSON.parse(JSON.stringify(citizensRaw));
 
     return (
         <div className="space-y-8">
