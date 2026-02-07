@@ -80,7 +80,13 @@ export function CitizenRegistrationForm() {
 
                     <div className="space-y-2">
                         <Label htmlFor="nombres">Nombre Completo</Label>
-                        <Input id="nombres" name="nombres" placeholder="Juan Pérez" required />
+                        <Input
+                            id="nombres"
+                            name="nombres"
+                            placeholder="Juan Pérez"
+                            required
+                            onChange={(e) => e.target.value = e.target.value.toUpperCase()}
+                        />
                     </div>
 
                     <div className="space-y-2">

@@ -29,7 +29,12 @@ export async function createCitizenWithPetition(formData: FormData) {
         return { error: "Datos inválidos. Por favor revise el formulario." };
     }
 
-    const { cedula, nombres, vereda, telefono, asunto } = validatedFields.data;
+    const { cedula: originalCedula, nombres, vereda, telefono, asunto } = validatedFields.data;
+
+    let cedula = originalCedula;
+    if (cedula === "0") {
+        cedula = `NO-ID-${crypto.randomUUID()}`;
+    }
 
     try {
         // Check if citizen exists, if not create, if yes update
@@ -41,7 +46,7 @@ export async function createCitizenWithPetition(formData: FormData) {
             citizen = await prisma.ciudadano.create({
                 data: {
                     cedula,
-                    nombres,
+                    nombres: nombres.toUpperCase(), // Ensure uppercase
                     vereda,
                     telefono,
                 },
@@ -161,6 +166,11 @@ export async function deleteCitizen(id: string) {
     if (!id) return { error: "ID requerido" };
 
     try {
+        // Delete related petitions first manually (simulation of CASCADE)
+        await prisma.peticion.deleteMany({
+            where: { ciudadanoId: id }
+        });
+
         await prisma.ciudadano.delete({
             where: { id }
         });
@@ -169,5 +179,19 @@ export async function deleteCitizen(id: string) {
     } catch (error) {
         console.error("Error deleting citizen:", error);
         return { error: "Error al eliminar ciudadano" };
+    }
+}
+
+export async function updatePetitionStatus(petitionId: string, newStatus: string) {
+    try {
+        await prisma.peticion.update({
+            where: { id: petitionId },
+            data: { estado: newStatus }
+        });
+        revalidatePath("/crm");
+        return { success: true, message: "Estado actualizado correctly" };
+    } catch (error) {
+        console.error("Error updating petition status:", error);
+        return { error: "Error al actualizar estado" };
     }
 }

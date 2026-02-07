@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Edit, Trash2, MoreHorizontal, Loader2, AlertTriangle } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { updateCitizen, deleteCitizen } from "@/app/actions/crm";
+import { updateCitizen, deleteCitizen, updatePetitionStatus } from "@/app/actions/crm";
 
 const VEREDAS = [
     "Casco Urbano",
@@ -49,8 +49,10 @@ interface CitizenListProps {
 
 export function CitizenList({ citizens }: CitizenListProps) {
     const [selectedCitizen, setSelectedCitizen] = useState<any | null>(null);
+    const [viewCitizen, setViewCitizen] = useState<any | null>(null);
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+    const [isViewOpen, setIsViewOpen] = useState(false);
     const [isPending, setIsPending] = useState(false);
 
     async function handleUpdate(formData: FormData) {
@@ -80,6 +82,18 @@ export function CitizenList({ citizens }: CitizenListProps) {
         setIsPending(false);
     }
 
+    async function handleStatusChange(petitionId: string, newStatus: string) {
+        setIsPending(true);
+        const result = await updatePetitionStatus(petitionId, newStatus);
+        if (result.success) {
+            toast.success("Estado actualizado");
+            setIsViewOpen(false);
+        } else {
+            toast.error(result.error);
+        }
+        setIsPending(false);
+    }
+
     const openEdit = (citizen: any) => {
         setSelectedCitizen(citizen);
         setIsEditOpen(true);
@@ -88,6 +102,11 @@ export function CitizenList({ citizens }: CitizenListProps) {
     const openDelete = (citizen: any) => {
         setSelectedCitizen(citizen);
         setIsDeleteOpen(true);
+    };
+
+    const openView = (citizen: any) => {
+        setViewCitizen(citizen);
+        setIsViewOpen(true);
     };
 
     return (
@@ -106,8 +125,17 @@ export function CitizenList({ citizens }: CitizenListProps) {
                 <TableBody>
                     {citizens.map((citizen) => {
                         const lastPetition = citizen.peticiones[0];
+                        const displayCedula = citizen.cedula.startsWith("NO-ID-") ? "Sin Cédula (0)" : citizen.cedula;
+
                         return (
-                            <TableRow key={citizen.id}>
+                            <TableRow
+                                key={citizen.id}
+                                className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900/50"
+                                onClick={(e) => {
+                                    if ((e.target as HTMLElement).closest("button") || (e.target as HTMLElement).closest("[role='menuitem']")) return;
+                                    openView(citizen);
+                                }}
+                            >
                                 <TableCell className="font-medium">
                                     <div className="flex items-center gap-3">
                                         <Avatar className="h-8 w-8 bg-indigo-100 text-indigo-700">
@@ -116,8 +144,8 @@ export function CitizenList({ citizens }: CitizenListProps) {
                                             </AvatarFallback>
                                         </Avatar>
                                         <div className="flex flex-col">
-                                            <span>{citizen.nombres}</span>
-                                            <span className="text-xs text-slate-500">{citizen.cedula}</span>
+                                            <span className="font-bold">{citizen.nombres}</span>
+                                            <span className="text-xs text-slate-500">{displayCedula}</span>
                                         </div>
                                     </div>
                                 </TableCell>
@@ -148,11 +176,11 @@ export function CitizenList({ citizens }: CitizenListProps) {
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={() => openEdit(citizen)}>
+                                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEdit(citizen); }}>
                                                 <Edit className="mr-2 h-4 w-4" />
                                                 Editar
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => openDelete(citizen)} className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/20">
+                                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openDelete(citizen); }} className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/20">
                                                 <Trash2 className="mr-2 h-4 w-4" />
                                                 Eliminar
                                             </DropdownMenuItem>
@@ -164,6 +192,68 @@ export function CitizenList({ citizens }: CitizenListProps) {
                     })}
                 </TableBody>
             </Table>
+
+            {/* View Details Dialog */}
+            <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+                <DialogContent className="sm:max-w-xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl">{viewCitizen?.nombres}</DialogTitle>
+                        <DialogDescription>
+                            Detalle de la última petición y estado.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {viewCitizen && (
+                        <div className="space-y-6 py-4">
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <Label className="text-slate-500">Cédula</Label>
+                                    <p className="font-medium">{viewCitizen.cedula.startsWith("NO-ID-") ? "No Registra (0)" : viewCitizen.cedula}</p>
+                                </div>
+                                <div>
+                                    <Label className="text-slate-500">Vereda</Label>
+                                    <p className="font-medium">{viewCitizen.vereda}</p>
+                                </div>
+                                <div>
+                                    <Label className="text-slate-500">Teléfono</Label>
+                                    <p className="font-medium">{viewCitizen.telefono || "No registrado"}</p>
+                                </div>
+                            </div>
+
+                            <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-100 dark:border-slate-800">
+                                <Label className="text-indigo-600 dark:text-indigo-400 mb-2 block font-semibold">
+                                    Última Petición
+                                </Label>
+                                <p className="text-base leading-relaxed">
+                                    {viewCitizen.peticiones[0]?.asunto || "No hay peticiones recientes."}
+                                </p>
+                            </div>
+
+                            {viewCitizen.peticiones[0] && (
+                                <div className="space-y-2">
+                                    <Label>Actualizar Estado</Label>
+                                    <div className="flex gap-2">
+                                        {["PENDIENTE", "EN_GESTION", "CUMPLIDO"].map(status => (
+                                            <Button
+                                                key={status}
+                                                size="sm"
+                                                variant={viewCitizen.peticiones[0].estado === status ? "default" : "outline"}
+                                                onClick={() => handleStatusChange(viewCitizen.peticiones[0].id, status)}
+                                                disabled={isPending}
+                                                className={
+                                                    status === "CUMPLIDO" && viewCitizen.peticiones[0].estado === status ? "bg-green-600 hover:bg-green-700" : ""
+                                                }
+                                            >
+                                                {status.replace("_", " ")}
+                                            </Button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
 
             {/* Edit Dialog */}
             <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
