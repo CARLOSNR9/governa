@@ -60,3 +60,14 @@ model Tarea {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+model Contacto {
+  id        String   @id @default(cuid())
+  nombre    String
+  cedula    String?  @unique
+  celular   String?
+  direccion String?
+  notas     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

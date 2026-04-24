@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "prisma generate && next build --webpack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:push": "prisma db push"
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
@@ -59,6 +60,6 @@
     "typescript": "^5"
   },
   "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "seed": "tsx prisma/seed-agenda.ts"
   }
 }
