@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, PenTool, Users, Calendar, BarChart3, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, PenTool, Users, Calendar, BarChart3, Settings, LogOut, BookUser } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface NavItem {
@@ -17,6 +17,7 @@ const navItems: NavItem[] = [
     { href: "/escritorio", label: "Escritorio Mágico", icon: PenTool },
     { href: "/crm", label: "Atención Ciudadana", icon: Users },
     { href: "/agenda", label: "Agenda Inteligente", icon: Calendar },
+    { href: "/directorio", label: "Directorio", icon: BookUser },
     { href: "/analitica", label: "Analítica", icon: BarChart3 },
 ];
 
@@ -64,6 +65,11 @@ export function Sidebar() {
                                 <span className="flex items-center gap-3">
                                     <item.icon className="h-5 w-5" />
                                     {item.label}
+                                    {item.disabled && (
+                                        <span className="ml-auto text-[10px] bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-400">
+                                            Próximamente
+                                        </span>
+                                    )}
                                 </span>
                             ) : (
                                 <Link href={item.href}>
