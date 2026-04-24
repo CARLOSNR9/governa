@@ -40,11 +40,15 @@ export async function createContact(formData: FormData) {
         revalidatePath("/directorio");
         return { success: true, message: "Contacto guardado correctamente." };
     } catch (error: any) {
-        console.error("Error creating contact:", error);
+        console.error("DETAILED ERROR creating contact:", error);
         if (error.code === 'P2002') {
             return { error: "Ya existe un contacto con esa cédula." };
         }
-        return { error: "Error al guardar el contacto." };
+        // Return a more descriptive error if it's a Prisma error
+        if (error.message) {
+            return { error: `Error de base de datos: ${error.message.split('\n')[0]}` };
+        }
+        return { error: "Error al guardar el contacto. Verifica la conexión a la base de datos." };
     }
 }
 
@@ -74,11 +78,14 @@ export async function updateContact(id: string, formData: FormData) {
         revalidatePath("/directorio");
         return { success: true, message: "Contacto actualizado correctamente." };
     } catch (error: any) {
-        console.error("Error updating contact:", error);
+        console.error("DETAILED ERROR updating contact:", error);
         if (error.code === 'P2002') {
             return { error: "Ya existe un contacto con esa cédula." };
         }
-        return { error: "Error al actualizar el contacto." };
+        if (error.message) {
+            return { error: `Error de base de datos: ${error.message.split('\n')[0]}` };
+        }
+        return { error: "Error al actualizar el contacto. Verifica la conexión a la base de datos." };
     }
 }
 
@@ -94,8 +101,11 @@ export async function deleteContact(id: string) {
 
         revalidatePath("/directorio");
         return { success: true, message: "Contacto eliminado correctamente." };
-    } catch (error) {
-        console.error("Error deleting contact:", error);
+    } catch (error: any) {
+        console.error("DETAILED ERROR deleting contact:", error);
+        if (error.message) {
+            return { error: `Error de base de datos: ${error.message.split('\n')[0]}` };
+        }
         return { error: "Error al eliminar el contacto." };
     }
 }
