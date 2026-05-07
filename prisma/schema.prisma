@@ -71,3 +71,14 @@ model Contacto {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model Transaccion {
+  id          String   @id @default(cuid())
+  concepto    String
+  monto       Float
+  tipo        String   // "INGRESO" o "EGRESO"
+  categoria   String?  // Ej: "Papelería", "Eventos", "Viáticos"
+  fecha       DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
