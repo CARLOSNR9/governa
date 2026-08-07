@@ -55,6 +55,7 @@ export default function GastosClient({ initialData, proyectos }: { initialData: 
         tipo: "EGRESO",
         categoria: "",
         proyectoId: "general", // "general" o id del proyecto
+        fecha: format(new Date(), "yyyy-MM-dd"), // Fecha por defecto: hoy
     });
 
     const [projectData, setProjectData] = useState({
@@ -89,13 +90,14 @@ export default function GastosClient({ initialData, proyectos }: { initialData: 
             tipo: formData.tipo as "INGRESO" | "EGRESO",
             categoria: formData.categoria,
             proyectoId: formData.proyectoId === "general" ? undefined : formData.proyectoId,
+            fecha: new Date(formData.fecha + "T12:00:00"), // Parseamos la fecha evitando problemas de zona horaria
         });
         setIsSubmitting(false);
 
         if (res.success) {
             toast.success("Transacción registrada correctamente");
             setIsDialogOpen(false);
-            setFormData({ concepto: "", monto: "", tipo: "EGRESO", categoria: "", proyectoId: "general" });
+            setFormData({ concepto: "", monto: "", tipo: "EGRESO", categoria: "", proyectoId: "general", fecha: format(new Date(), "yyyy-MM-dd") });
             // Update selected project if active
             if (selectedProyecto) {
                 // To keep it simple, rely on revalidation or next.js router refresh if needed, but since it's server actions revalidating, page will reload.
@@ -472,6 +474,14 @@ export default function GastosClient({ initialData, proyectos }: { initialData: 
                                     ))}
                                 </SelectContent>
                             </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Fecha</Label>
+                            <Input
+                                type="date"
+                                value={formData.fecha}
+                                onChange={(e) => setFormData({ ...formData, fecha: e.target.value })}
+                            />
                         </div>
                         <div className="space-y-2">
                             <Label>Tipo de Movimiento</Label>
