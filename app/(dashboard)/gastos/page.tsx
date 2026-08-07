@@ -3,6 +3,8 @@ import { getProyectos } from "@/app/actions/proyectos";
 import GastosClient from "./GastosClient";
 import { Wallet, TrendingUp, TrendingDown, DollarSign } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
 export default async function GastosPage() {
     const response = await getTransacciones();
     const proyectosResponse = await getProyectos();
