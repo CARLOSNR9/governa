@@ -108,7 +108,7 @@ export default function GastosClient({ initialData, proyectos }: { initialData: 
     };
 
     const handleCreateProject = async () => {
-        if (!projectData.nombre || !projectData.presupuesto) {
+        if (!projectData.nombre || projectData.presupuesto === "" || projectData.presupuesto === undefined) {
             toast.error("Nombre y presupuesto son obligatorios");
             return;
         }
@@ -131,7 +131,7 @@ export default function GastosClient({ initialData, proyectos }: { initialData: 
     };
 
     const handleUpdateProject = async () => {
-        if (!projectToEdit?.nombre || !projectToEdit?.presupuesto) {
+        if (!projectToEdit?.nombre || projectToEdit?.presupuesto === "" || projectToEdit?.presupuesto === undefined) {
             toast.error("Nombre y presupuesto son obligatorios");
             return;
         }
