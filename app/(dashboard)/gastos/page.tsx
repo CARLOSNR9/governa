@@ -38,47 +38,8 @@ export default async function GastosPage() {
                 </p>
             </div>
 
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
-                    <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-lg">
-                        <TrendingUp className="h-6 w-6" />
-                    </div>
-                    <div>
-                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Ingresos Totales</p>
-                        <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                            ${summary.totalIngresos.toLocaleString("es-CO")}
-                        </p>
-                    </div>
-                </div>
-
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
-                    <div className="p-3 bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-lg">
-                        <TrendingDown className="h-6 w-6" />
-                    </div>
-                    <div>
-                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Egresos Totales</p>
-                        <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                            ${summary.totalEgresos.toLocaleString("es-CO")}
-                        </p>
-                    </div>
-                </div>
-
-                <div className="bg-indigo-600 dark:bg-indigo-900 p-6 rounded-xl border border-indigo-700 dark:border-indigo-800 shadow-sm flex items-center gap-4 text-white">
-                    <div className="p-3 bg-indigo-500 dark:bg-indigo-800 rounded-lg">
-                        <DollarSign className="h-6 w-6" />
-                    </div>
-                    <div>
-                        <p className="text-sm font-medium text-indigo-100">Saldo Actual</p>
-                        <p className="text-2xl font-bold">
-                            ${summary.saldo.toLocaleString("es-CO")}
-                        </p>
-                    </div>
-                </div>
-            </div>
-
             {/* Client Component for the Data Table & Form */}
-            <GastosClient initialData={transacciones} proyectos={proyectos || []} />
+            <GastosClient initialData={transacciones} proyectos={proyectos || []} globalSummary={summary} />
         </div>
     );
 }

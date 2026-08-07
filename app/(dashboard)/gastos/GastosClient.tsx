@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Plus, Trash2, Search, ArrowUpCircle, ArrowDownCircle, Briefcase, ArrowLeft } from "lucide-react";
+import { Plus, Trash2, Search, ArrowUpCircle, ArrowDownCircle, Briefcase, ArrowLeft, TrendingUp, TrendingDown, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { createTransaccion, deleteTransaccion } from "@/app/actions/gastos";
 import { createProyecto, deleteProyecto, updateProyecto } from "@/app/actions/proyectos";
@@ -38,7 +38,15 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-export default function GastosClient({ initialData, proyectos }: { initialData: any[], proyectos: any[] }) {
+export default function GastosClient({ 
+    initialData, 
+    proyectos,
+    globalSummary
+}: { 
+    initialData: any[], 
+    proyectos: any[],
+    globalSummary: { totalIngresos: number, totalEgresos: number, saldo: number }
+}) {
     const [searchTerm, setSearchTerm] = useState("");
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false);
@@ -254,8 +262,70 @@ export default function GastosClient({ initialData, proyectos }: { initialData: 
         </div>
     );
 
+    // Determinar qué resumen mostrar arriba
+    const activeSummary = selectedProyecto 
+        ? {
+            totalIngresos: selectedProyecto.ingresos || 0,
+            totalEgresos: selectedProyecto.gastos || 0,
+            saldo: selectedProyecto.saldo || 0,
+            tituloSaldo: "Saldo del Proyecto",
+            presupuesto: selectedProyecto.presupuesto
+        }
+        : {
+            totalIngresos: globalSummary.totalIngresos,
+            totalEgresos: globalSummary.totalEgresos,
+            saldo: globalSummary.saldo,
+            tituloSaldo: "Saldo General",
+            presupuesto: null
+        };
+
     return (
-        <Tabs defaultValue="generales" className="w-full" onValueChange={() => setSelectedProyecto(null)}>
+        <div className="space-y-6">
+            {/* Dynamic Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
+                    <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-lg">
+                        <TrendingUp className="h-6 w-6" />
+                    </div>
+                    <div>
+                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Ingresos Totales</p>
+                        <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                            ${activeSummary.totalIngresos.toLocaleString("es-CO")}
+                        </p>
+                    </div>
+                </div>
+
+                <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
+                    <div className="p-3 bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-lg">
+                        <TrendingDown className="h-6 w-6" />
+                    </div>
+                    <div>
+                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Egresos Totales</p>
+                        <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                            ${activeSummary.totalEgresos.toLocaleString("es-CO")}
+                        </p>
+                    </div>
+                </div>
+
+                <div className="bg-indigo-600 dark:bg-indigo-900 p-6 rounded-xl border border-indigo-700 dark:border-indigo-800 shadow-sm flex items-center gap-4 text-white">
+                    <div className="p-3 bg-indigo-500 dark:bg-indigo-800 rounded-lg">
+                        <DollarSign className="h-6 w-6" />
+                    </div>
+                    <div>
+                        <p className="text-sm font-medium text-indigo-100">{activeSummary.tituloSaldo}</p>
+                        <p className="text-2xl font-bold flex items-end gap-2">
+                            ${activeSummary.saldo.toLocaleString("es-CO")}
+                            {activeSummary.presupuesto !== null && activeSummary.presupuesto > 0 && (
+                                <span className="text-xs font-normal text-indigo-200 mb-1">
+                                    (Ppto: ${activeSummary.presupuesto.toLocaleString("es-CO")})
+                                </span>
+                            )}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <Tabs defaultValue="generales" className="w-full" onValueChange={() => setSelectedProyecto(null)}>
             <TabsList className="grid w-full md:w-[400px] grid-cols-2 mb-6">
                 <TabsTrigger value="generales">Gastos Generales</TabsTrigger>
                 <TabsTrigger value="proyectos">Mis Proyectos</TabsTrigger>
@@ -418,21 +488,6 @@ export default function GastosClient({ initialData, proyectos }: { initialData: 
                             </div>
                         </CardHeader>
                         <CardContent className="p-6">
-                            <div className="grid grid-cols-3 gap-4 mb-6">
-                                <div className="bg-slate-50 p-4 rounded-lg border">
-                                    <p className="text-sm text-slate-500">Presupuesto</p>
-                                    <p className="text-xl font-bold">${selectedProyecto.presupuesto.toLocaleString("es-CO")}</p>
-                                </div>
-                                <div className="bg-rose-50 p-4 rounded-lg border border-rose-100">
-                                    <p className="text-sm text-rose-600">Total Gastos</p>
-                                    <p className="text-xl font-bold text-rose-700">${selectedProyecto.gastos.toLocaleString("es-CO")}</p>
-                                </div>
-                                <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-100">
-                                    <p className="text-sm text-emerald-600">Saldo Disponible</p>
-                                    <p className="text-xl font-bold text-emerald-700">${selectedProyecto.saldo.toLocaleString("es-CO")}</p>
-                                </div>
-                            </div>
-
                             <div className="flex justify-between items-center mb-4">
                                 <h3>Movimientos</h3>
                                 <Button onClick={() => {
@@ -579,5 +634,6 @@ export default function GastosClient({ initialData, proyectos }: { initialData: 
                 </DialogContent>
             </Dialog>
         </Tabs>
+        </div>
     );
 }
