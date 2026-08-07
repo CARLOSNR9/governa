@@ -42,6 +42,7 @@ export async function createTransaccion(data: {
     tipo: "INGRESO" | "EGRESO";
     categoria?: string;
     fecha?: Date;
+    proyectoId?: string;
 }) {
     try {
         const nuevaTransaccion = await prisma.transaccion.create({
@@ -51,6 +52,7 @@ export async function createTransaccion(data: {
                 tipo: data.tipo,
                 categoria: data.categoria || null,
                 fecha: data.fecha || new Date(),
+                proyectoId: data.proyectoId || null,
             },
         });
 

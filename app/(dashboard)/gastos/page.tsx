@@ -1,11 +1,13 @@
 import { getTransacciones } from "@/app/actions/gastos";
+import { getProyectos } from "@/app/actions/proyectos";
 import GastosClient from "./GastosClient";
 import { Wallet, TrendingUp, TrendingDown, DollarSign } from "lucide-react";
 
 export default async function GastosPage() {
     const response = await getTransacciones();
+    const proyectosResponse = await getProyectos();
 
-    if (!response.success) {
+    if (!response.success || !proyectosResponse.success) {
         return (
             <div className="flex flex-col items-center justify-center h-full">
                 <Wallet className="h-16 w-16 text-slate-300 mb-4" />
@@ -16,8 +18,9 @@ export default async function GastosPage() {
     }
 
     const { data: transacciones, summary } = response;
+    const { data: proyectos } = proyectosResponse;
 
-    if (!summary) {
+    if (!summary || !transacciones) {
         return null;
     }
 
@@ -73,7 +76,7 @@ export default async function GastosPage() {
             </div>
 
             {/* Client Component for the Data Table & Form */}
-            <GastosClient initialData={transacciones} />
+            <GastosClient initialData={transacciones} proyectos={proyectos || []} />
         </div>
     );
 }
