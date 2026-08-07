@@ -147,10 +147,11 @@ export default function GastosClient({ initialData, proyectos }: { initialData: 
             setIsEditProjectDialogOpen(false);
             setProjectToEdit(null);
             if (selectedProyecto?.id === projectToEdit.id) {
-                 // The page will revalidate and we could optionally update the selected project state
-                 // but Next.js Server Actions revalidation will refresh the props.
-                 // So we just update the selected project with the new data locally to be snappy:
-                 setSelectedProyecto(res.data);
+                 setSelectedProyecto({
+                     ...selectedProyecto,
+                     ...res.data,
+                     saldo: res.data.presupuesto + (selectedProyecto.ingresos || 0) - (selectedProyecto.gastos || 0)
+                 });
             }
         } else {
             toast.error(res.error || "Error al actualizar proyecto");
