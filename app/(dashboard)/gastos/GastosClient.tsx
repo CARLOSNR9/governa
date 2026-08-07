@@ -6,7 +6,7 @@ import { es } from "date-fns/locale";
 import { Plus, Trash2, Search, ArrowUpCircle, ArrowDownCircle, Briefcase, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { createTransaccion, deleteTransaccion } from "@/app/actions/gastos";
-import { createProyecto, deleteProyecto } from "@/app/actions/proyectos";
+import { createProyecto, deleteProyecto, updateProyecto } from "@/app/actions/proyectos";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,10 +42,12 @@ export default function GastosClient({ initialData, proyectos }: { initialData: 
     const [searchTerm, setSearchTerm] = useState("");
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false);
+    const [isEditProjectDialogOpen, setIsEditProjectDialogOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     
     // Vista de proyectos
     const [selectedProyecto, setSelectedProyecto] = useState<any | null>(null);
+    const [projectToEdit, setProjectToEdit] = useState<any | null>(null);
 
     const [formData, setFormData] = useState({
         concepto: "",
@@ -123,6 +125,35 @@ export default function GastosClient({ initialData, proyectos }: { initialData: 
             setProjectData({ nombre: "", presupuesto: "", descripcion: "" });
         } else {
             toast.error(res.error || "Error al crear proyecto");
+        }
+    };
+
+    const handleUpdateProject = async () => {
+        if (!projectToEdit?.nombre || !projectToEdit?.presupuesto) {
+            toast.error("Nombre y presupuesto son obligatorios");
+            return;
+        }
+
+        setIsSubmitting(true);
+        const res = await updateProyecto(projectToEdit.id, {
+            nombre: projectToEdit.nombre,
+            descripcion: projectToEdit.descripcion,
+            presupuesto: parseFloat(projectToEdit.presupuesto),
+        });
+        setIsSubmitting(false);
+
+        if (res.success) {
+            toast.success("Proyecto actualizado correctamente");
+            setIsEditProjectDialogOpen(false);
+            setProjectToEdit(null);
+            if (selectedProyecto?.id === projectToEdit.id) {
+                 // The page will revalidate and we could optionally update the selected project state
+                 // but Next.js Server Actions revalidation will refresh the props.
+                 // So we just update the selected project with the new data locally to be snappy:
+                 setSelectedProyecto(res.data);
+            }
+        } else {
+            toast.error(res.error || "Error al actualizar proyecto");
         }
     };
 
@@ -371,9 +402,17 @@ export default function GastosClient({ initialData, proyectos }: { initialData: 
                                     <CardDescription>Detalle de movimientos del proyecto</CardDescription>
                                 </div>
                             </div>
-                            <Button variant="destructive" size="sm" onClick={() => handleDeleteProyecto(selectedProyecto.id)}>
-                                Eliminar Proyecto
-                            </Button>
+                            <div className="flex gap-2">
+                                <Button variant="outline" size="sm" onClick={() => {
+                                    setProjectToEdit({ ...selectedProyecto });
+                                    setIsEditProjectDialogOpen(true);
+                                }}>
+                                    Editar
+                                </Button>
+                                <Button variant="destructive" size="sm" onClick={() => handleDeleteProyecto(selectedProyecto.id)}>
+                                    Eliminar
+                                </Button>
+                            </div>
                         </CardHeader>
                         <CardContent className="p-6">
                             <div className="grid grid-cols-3 gap-4 mb-6">
@@ -480,6 +519,50 @@ export default function GastosClient({ initialData, proyectos }: { initialData: 
                         </Button>
                         <Button onClick={handleCreateTransaccion} disabled={isSubmitting} className="bg-indigo-600 hover:bg-indigo-700">
                             {isSubmitting ? "Guardando..." : "Guardar Registro"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal para Editar Proyecto */}
+            <Dialog open={isEditProjectDialogOpen} onOpenChange={setIsEditProjectDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Editar Proyecto</DialogTitle>
+                    </DialogHeader>
+                    {projectToEdit && (
+                        <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                                <Label>Nombre del Proyecto</Label>
+                                <Input
+                                    placeholder="Ej: Minga con la comunidad"
+                                    value={projectToEdit.nombre}
+                                    onChange={(e) => setProjectToEdit({ ...projectToEdit, nombre: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Presupuesto Asignado ($)</Label>
+                                <Input
+                                    type="number"
+                                    placeholder="0"
+                                    value={projectToEdit.presupuesto}
+                                    onChange={(e) => setProjectToEdit({ ...projectToEdit, presupuesto: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Descripción (Opcional)</Label>
+                                <Input
+                                    placeholder="Detalles adicionales..."
+                                    value={projectToEdit.descripcion || ""}
+                                    onChange={(e) => setProjectToEdit({ ...projectToEdit, descripcion: e.target.value })}
+                                />
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsEditProjectDialogOpen(false)}>Cancelar</Button>
+                        <Button onClick={handleUpdateProject} disabled={isSubmitting} className="bg-indigo-600 hover:bg-indigo-700">
+                            Actualizar Proyecto
                         </Button>
                     </DialogFooter>
                 </DialogContent>

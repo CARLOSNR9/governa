@@ -84,3 +84,22 @@ export async function deleteProyecto(id: string) {
         return { success: false, error: "Error al eliminar proyecto" };
     }
 }
+
+export async function updateProyecto(id: string, data: {
+    nombre?: string;
+    descripcion?: string;
+    presupuesto?: number;
+}) {
+    try {
+        const proyectoActualizado = await prisma.proyecto.update({
+            where: { id },
+            data,
+        });
+
+        revalidatePath("/gastos");
+        return { success: true, data: proyectoActualizado };
+    } catch (error) {
+        console.error("Error al actualizar proyecto:", error);
+        return { success: false, error: "Error al actualizar proyecto" };
+    }
+}
