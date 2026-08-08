@@ -11,11 +11,13 @@ export async function getTransacciones() {
             },
         });
 
-        const totalIngresos = transacciones
+        const transaccionesGenerales = transacciones.filter((t: any) => !t.proyectoId);
+
+        const totalIngresos = transaccionesGenerales
             .filter((t: any) => t.tipo === "INGRESO")
             .reduce((acc: number, t: any) => acc + t.monto, 0);
 
-        const totalEgresos = transacciones
+        const totalEgresos = transaccionesGenerales
             .filter((t: any) => t.tipo === "EGRESO")
             .reduce((acc: number, t: any) => acc + t.monto, 0);
 
