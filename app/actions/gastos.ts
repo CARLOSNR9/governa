@@ -6,9 +6,10 @@ import { revalidatePath } from "next/cache";
 export async function getTransacciones() {
     try {
         const transacciones = await prisma.transaccion.findMany({
-            orderBy: {
-                fecha: "desc",
-            },
+            orderBy: [
+                { fecha: "desc" },
+                { createdAt: "desc" }
+            ],
         });
 
         const transaccionesGenerales = transacciones.filter((t: any) => !t.proyectoId);

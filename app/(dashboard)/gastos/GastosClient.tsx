@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Plus, Trash2, Search, ArrowUpCircle, ArrowDownCircle, Briefcase, ArrowLeft, TrendingUp, TrendingDown, DollarSign } from "lucide-react";
+import { Plus, Trash2, Search, ArrowUpCircle, ArrowDownCircle, Briefcase, ArrowLeft, TrendingUp, TrendingDown, DollarSign, Edit } from "lucide-react";
 import { toast } from "sonner";
 import { createTransaccion, deleteTransaccion } from "@/app/actions/gastos";
 import { createProyecto, deleteProyecto, updateProyecto } from "@/app/actions/proyectos";
@@ -514,25 +514,25 @@ export default function GastosClient({
                 ) : (
                     // Vista detallada de un proyecto
                     <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
-                        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 gap-4 border-b">
-                            <div className="flex items-start gap-4">
-                                <Button variant="ghost" size="icon" className="mt-1 shrink-0" onClick={() => setSelectedProjectId(null)}>
+                        <CardHeader className="flex flex-row items-center justify-between pb-4 border-b gap-2">
+                            <div className="flex items-center gap-2 sm:gap-4">
+                                <Button variant="ghost" size="icon" className="shrink-0" onClick={() => setSelectedProjectId(null)}>
                                     <ArrowLeft className="h-5 w-5" />
                                 </Button>
-                                <div>
-                                    <CardTitle className="text-xl leading-tight">{selectedProyecto.nombre}</CardTitle>
-                                    <CardDescription className="mt-1">Detalle de movimientos</CardDescription>
+                                <div className="overflow-hidden">
+                                    <CardTitle className="text-lg sm:text-xl leading-tight truncate">{selectedProyecto.nombre}</CardTitle>
+                                    <CardDescription className="hidden sm:block mt-1">Detalle de movimientos</CardDescription>
                                 </div>
                             </div>
-                            <div className="flex gap-2 w-full sm:w-auto pl-12 sm:pl-0">
-                                <Button className="flex-1 sm:flex-none" variant="outline" size="sm" onClick={() => {
+                            <div className="flex gap-1 shrink-0">
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50" onClick={() => {
                                     setProjectToEdit({ ...selectedProyecto });
                                     setIsEditProjectDialogOpen(true);
                                 }}>
-                                    Editar
+                                    <Edit className="h-4 w-4" />
                                 </Button>
-                                <Button className="flex-1 sm:flex-none" variant="destructive" size="sm" onClick={() => handleDeleteProyecto(selectedProyecto.id)}>
-                                    Eliminar
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-rose-600 hover:bg-rose-50" onClick={() => handleDeleteProyecto(selectedProyecto.id)}>
+                                    <Trash2 className="h-4 w-4" />
                                 </Button>
                             </div>
                         </CardHeader>
