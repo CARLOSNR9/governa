@@ -181,80 +181,134 @@ export default function GastosClient({
         }
     };
 
-    // Componente de tabla reutilizable
+    // Componente de tabla reutilizable y responsivo
     const renderTable = (data: any[]) => (
-        <div className="rounded-md border border-slate-200 dark:border-slate-800 mt-6">
-            <Table>
-                <TableHeader>
-                    <TableRow className="bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-50 dark:hover:bg-slate-900/50">
-                        <TableHead>Fecha</TableHead>
-                        <TableHead>Concepto</TableHead>
-                        <TableHead>Categoría</TableHead>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead className="text-right">Monto</TableHead>
-                        <TableHead className="w-[80px]"></TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {data.length === 0 ? (
-                        <TableRow>
-                            <TableCell colSpan={6} className="text-center py-8 text-slate-500">
-                                No hay registros que mostrar.
-                            </TableCell>
+        <>
+            {/* Desktop Table */}
+            <div className="hidden md:block rounded-md border border-slate-200 dark:border-slate-800 mt-6">
+                <Table>
+                    <TableHeader>
+                        <TableRow className="bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-50 dark:hover:bg-slate-900/50">
+                            <TableHead>Fecha</TableHead>
+                            <TableHead>Concepto</TableHead>
+                            <TableHead>Categoría</TableHead>
+                            <TableHead>Tipo</TableHead>
+                            <TableHead className="text-right">Monto</TableHead>
+                            <TableHead className="w-[80px]"></TableHead>
                         </TableRow>
-                    ) : (
-                        data.map((t) => (
-                            <TableRow key={t.id}>
-                                <TableCell className="font-medium text-slate-600 dark:text-slate-300">
-                                    {format(new Date(t.fecha), "dd MMM yyyy", { locale: es })}
+                    </TableHeader>
+                    <TableBody>
+                        {data.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={6} className="text-center py-8 text-slate-500">
+                                    No hay registros que mostrar.
                                 </TableCell>
-                                <TableCell>{t.concepto}</TableCell>
-                                <TableCell>
-                                    {t.categoria ? (
-                                        <Badge variant="outline" className="text-slate-500 bg-slate-50">
-                                            {t.categoria}
-                                        </Badge>
-                                    ) : (
-                                        <span className="text-slate-400">-</span>
-                                    )}
-                                </TableCell>
-                                <TableCell>
+                            </TableRow>
+                        ) : (
+                            data.map((t) => (
+                                <TableRow key={t.id}>
+                                    <TableCell className="font-medium text-slate-600 dark:text-slate-300">
+                                        {format(new Date(t.fecha), "dd MMM yyyy", { locale: es })}
+                                    </TableCell>
+                                    <TableCell>{t.concepto}</TableCell>
+                                    <TableCell>
+                                        {t.categoria ? (
+                                            <Badge variant="outline" className="text-slate-500 bg-slate-50">
+                                                {t.categoria}
+                                            </Badge>
+                                        ) : (
+                                            <span className="text-slate-400">-</span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell>
+                                        {t.tipo === "INGRESO" ? (
+                                            <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-none flex w-fit items-center gap-1">
+                                                <ArrowUpCircle className="h-3 w-3" /> Ingreso
+                                            </Badge>
+                                        ) : (
+                                            <Badge className="bg-rose-100 text-rose-700 hover:bg-rose-100 border-none flex w-fit items-center gap-1">
+                                                <ArrowDownCircle className="h-3 w-3" /> Egreso
+                                            </Badge>
+                                        )}
+                                    </TableCell>
+                                    <TableCell
+                                        className={`text-right font-semibold ${
+                                            t.tipo === "INGRESO"
+                                                ? "text-emerald-600"
+                                                : "text-slate-900 dark:text-slate-100"
+                                        }`}
+                                    >
+                                        {t.tipo === "INGRESO" ? "+" : "-"}$
+                                        {t.monto.toLocaleString("es-CO")}
+                                    </TableCell>
+                                    <TableCell>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleDeleteTransaccion(t.id)}
+                                            className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        )}
+                    </TableBody>
+                </Table>
+            </div>
+
+            {/* Mobile Cards for Transactions */}
+            <div className="md:hidden space-y-3 mt-4">
+                {data.length === 0 ? (
+                    <div className="text-center py-8 text-slate-500 border rounded-lg border-dashed">
+                        No hay registros que mostrar.
+                    </div>
+                ) : (
+                    data.map((t) => (
+                        <div key={t.id} className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm flex flex-col gap-3">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <p className="font-semibold text-slate-800 dark:text-slate-200">{t.concepto}</p>
+                                    <p className="text-xs text-slate-500 mt-1">{format(new Date(t.fecha), "dd MMM yyyy", { locale: es })}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className={`font-bold ${t.tipo === "INGRESO" ? "text-emerald-600" : "text-slate-900 dark:text-slate-100"}`}>
+                                        {t.tipo === "INGRESO" ? "+" : "-"}${t.monto.toLocaleString("es-CO")}
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-800">
+                                <div className="flex gap-2 flex-wrap">
                                     {t.tipo === "INGRESO" ? (
-                                        <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-none flex w-fit items-center gap-1">
+                                        <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-none flex w-fit items-center gap-1 text-[10px] px-2 py-0 h-5">
                                             <ArrowUpCircle className="h-3 w-3" /> Ingreso
                                         </Badge>
                                     ) : (
-                                        <Badge className="bg-rose-100 text-rose-700 hover:bg-rose-100 border-none flex w-fit items-center gap-1">
+                                        <Badge className="bg-rose-100 text-rose-700 hover:bg-rose-100 border-none flex w-fit items-center gap-1 text-[10px] px-2 py-0 h-5">
                                             <ArrowDownCircle className="h-3 w-3" /> Egreso
                                         </Badge>
                                     )}
-                                </TableCell>
-                                <TableCell
-                                    className={`text-right font-semibold ${
-                                        t.tipo === "INGRESO"
-                                            ? "text-emerald-600"
-                                            : "text-slate-900 dark:text-slate-100"
-                                    }`}
+                                    {t.categoria && (
+                                        <Badge variant="outline" className="text-[10px] px-2 py-0 h-5 text-slate-500 bg-slate-50 border-slate-200">
+                                            {t.categoria}
+                                        </Badge>
+                                    )}
+                                </div>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleDeleteTransaccion(t.id)}
+                                    className="h-7 w-7 text-slate-400 hover:text-red-600 hover:bg-red-50 -mr-2"
                                 >
-                                    {t.tipo === "INGRESO" ? "+" : "-"}$
-                                    {t.monto.toLocaleString("es-CO")}
-                                </TableCell>
-                                <TableCell>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => handleDeleteTransaccion(t.id)}
-                                        className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50"
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </TableCell>
-                            </TableRow>
-                        ))
-                    )}
-                </TableBody>
-            </Table>
-        </div>
+                                    <Trash2 className="h-3 w-3" />
+                                </Button>
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+        </>
     );
 
     // Determinar qué resumen mostrar arriba
@@ -460,35 +514,35 @@ export default function GastosClient({
                 ) : (
                     // Vista detallada de un proyecto
                     <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <div className="flex items-center gap-4">
-                                <Button variant="ghost" size="icon" onClick={() => setSelectedProjectId(null)}>
+                        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 gap-4 border-b">
+                            <div className="flex items-start gap-4">
+                                <Button variant="ghost" size="icon" className="mt-1 shrink-0" onClick={() => setSelectedProjectId(null)}>
                                     <ArrowLeft className="h-5 w-5" />
                                 </Button>
                                 <div>
-                                    <CardTitle>{selectedProyecto.nombre}</CardTitle>
-                                    <CardDescription>Detalle de movimientos del proyecto</CardDescription>
+                                    <CardTitle className="text-xl leading-tight">{selectedProyecto.nombre}</CardTitle>
+                                    <CardDescription className="mt-1">Detalle de movimientos</CardDescription>
                                 </div>
                             </div>
-                            <div className="flex gap-2">
-                                <Button variant="outline" size="sm" onClick={() => {
+                            <div className="flex gap-2 w-full sm:w-auto pl-12 sm:pl-0">
+                                <Button className="flex-1 sm:flex-none" variant="outline" size="sm" onClick={() => {
                                     setProjectToEdit({ ...selectedProyecto });
                                     setIsEditProjectDialogOpen(true);
                                 }}>
                                     Editar
                                 </Button>
-                                <Button variant="destructive" size="sm" onClick={() => handleDeleteProyecto(selectedProyecto.id)}>
+                                <Button className="flex-1 sm:flex-none" variant="destructive" size="sm" onClick={() => handleDeleteProyecto(selectedProyecto.id)}>
                                     Eliminar
                                 </Button>
                             </div>
                         </CardHeader>
-                        <CardContent className="p-6">
-                            <div className="flex justify-between items-center mb-4">
-                                <h3>Movimientos</h3>
-                                <Button onClick={() => {
+                        <CardContent className="p-4 sm:p-6">
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2 mt-2">
+                                <h3 className="font-medium text-lg">Movimientos</h3>
+                                <Button className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700" onClick={() => {
                                     setFormData({...formData, proyectoId: selectedProyecto.id});
                                     setIsDialogOpen(true);
-                                }} className="bg-indigo-600 hover:bg-indigo-700">
+                                }}>
                                     <Plus className="h-4 w-4 mr-2" />
                                     Registrar Gasto del Proyecto
                                 </Button>
