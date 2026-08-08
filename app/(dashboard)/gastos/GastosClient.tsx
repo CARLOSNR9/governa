@@ -54,7 +54,9 @@ export default function GastosClient({
     const [isSubmitting, setIsSubmitting] = useState(false);
     
     // Vista de proyectos
-    const [selectedProyecto, setSelectedProyecto] = useState<any | null>(null);
+    const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+    const selectedProyecto = proyectos.find(p => p.id === selectedProjectId) || null;
+    
     const [projectToEdit, setProjectToEdit] = useState<any | null>(null);
 
     const [formData, setFormData] = useState({
@@ -106,10 +108,6 @@ export default function GastosClient({
             toast.success("Transacción registrada correctamente");
             setIsDialogOpen(false);
             setFormData({ concepto: "", monto: "", tipo: "EGRESO", categoria: "", proyectoId: "general", fecha: format(new Date(), "yyyy-MM-dd") });
-            // Update selected project if active
-            if (selectedProyecto) {
-                // To keep it simple, rely on revalidation or next.js router refresh if needed, but since it's server actions revalidating, page will reload.
-            }
         } else {
             toast.error(res.error || "Error al registrar la transacción");
         }
@@ -156,13 +154,6 @@ export default function GastosClient({
             toast.success("Proyecto actualizado correctamente");
             setIsEditProjectDialogOpen(false);
             setProjectToEdit(null);
-            if (selectedProyecto?.id === projectToEdit.id) {
-                 setSelectedProyecto({
-                     ...selectedProyecto,
-                     ...res.data,
-                     saldo: res.data.presupuesto + (selectedProyecto.ingresos || 0) - (selectedProyecto.gastos || 0)
-                 });
-            }
         } else {
             toast.error(res.error || "Error al actualizar proyecto");
         }
@@ -180,7 +171,7 @@ export default function GastosClient({
         const res = await deleteProyecto(id);
         if (res.success) {
             toast.success("Proyecto eliminado");
-            setSelectedProyecto(null);
+            setSelectedProjectId(null);
         } else {
             toast.error(res.error || "Error al eliminar proyecto");
         }
@@ -325,7 +316,7 @@ export default function GastosClient({
                 </div>
             </div>
 
-            <Tabs defaultValue="generales" className="w-full" onValueChange={() => setSelectedProyecto(null)}>
+            <Tabs defaultValue="generales" className="w-full" onValueChange={() => setSelectedProjectId(null)}>
             <TabsList className="grid w-full md:w-[400px] grid-cols-2 mb-6">
                 <TabsTrigger value="generales">Gastos Generales</TabsTrigger>
                 <TabsTrigger value="proyectos">Mis Proyectos</TabsTrigger>
@@ -422,7 +413,7 @@ export default function GastosClient({
                                 {proyectos.map(p => {
                                     const porcentaje = p.presupuesto > 0 ? (p.gastos / p.presupuesto) * 100 : 0;
                                     return (
-                                        <Card key={p.id} className="cursor-pointer hover:border-indigo-300 transition-colors" onClick={() => setSelectedProyecto(p)}>
+                                        <Card key={p.id} className="cursor-pointer hover:border-indigo-300 transition-colors" onClick={() => setSelectedProjectId(p.id)}>
                                             <CardHeader className="pb-2">
                                                 <CardTitle className="text-lg flex justify-between items-start">
                                                     {p.nombre}
@@ -467,7 +458,7 @@ export default function GastosClient({
                     <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
                             <div className="flex items-center gap-4">
-                                <Button variant="ghost" size="icon" onClick={() => setSelectedProyecto(null)}>
+                                <Button variant="ghost" size="icon" onClick={() => setSelectedProjectId(null)}>
                                     <ArrowLeft className="h-5 w-5" />
                                 </Button>
                                 <div>
