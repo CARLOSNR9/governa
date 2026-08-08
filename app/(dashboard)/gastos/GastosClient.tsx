@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Plus, Trash2, Search, ArrowUpCircle, ArrowDownCircle, Briefcase, ArrowLeft, TrendingUp, TrendingDown, DollarSign, Edit } from "lucide-react";
+import { Plus, Trash2, Search, ArrowUpCircle, ArrowDownCircle, Briefcase, ArrowLeft, TrendingUp, TrendingDown, DollarSign, Edit, Download } from "lucide-react";
 import { toast } from "sonner";
-import { createTransaccion, deleteTransaccion } from "@/app/actions/gastos";
+import { createTransaccion, deleteTransaccion, updateTransaccion } from "@/app/actions/gastos";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { createProyecto, deleteProyecto, updateProyecto } from "@/app/actions/proyectos";
 
 import { Button } from "@/components/ui/button";
@@ -51,7 +53,9 @@ export default function GastosClient({
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false);
     const [isEditProjectDialogOpen, setIsEditProjectDialogOpen] = useState(false);
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [transaccionToEdit, setTransaccionToEdit] = useState<any | null>(null);
     
     // Vista de proyectos
     const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -86,6 +90,85 @@ export default function GastosClient({
             t.concepto.toLowerCase().includes(searchTerm.toLowerCase()) ||
             (t.categoria && t.categoria.toLowerCase().includes(searchTerm.toLowerCase()))
     );
+
+    const handleDownloadPDF = () => {
+        if (!selectedProyecto) return;
+
+        const doc = new jsPDF();
+        
+        doc.setFontSize(20);
+        doc.text(`Reporte de Proyecto: ${selectedProyecto.nombre}`, 14, 22);
+        
+        doc.setFontSize(12);
+        doc.text(`Presupuesto: $${selectedProyecto.presupuesto.toLocaleString("es-CO")}`, 14, 32);
+        doc.text(`Total Ingresos: $${(selectedProyecto.ingresos || 0).toLocaleString("es-CO")}`, 14, 38);
+        doc.text(`Total Gastos: $${(selectedProyecto.gastos || 0).toLocaleString("es-CO")}`, 14, 44);
+        doc.text(`Saldo: $${(selectedProyecto.saldo || 0).toLocaleString("es-CO")}`, 14, 50);
+
+        const tableColumn = ["Fecha", "Concepto", "Categoría", "Tipo", "Monto"];
+        const tableRows: any[] = [];
+
+        filteredData.forEach(t => {
+            const rowData = [
+                format(new Date(t.fecha), "dd/MM/yyyy"),
+                t.concepto,
+                t.categoria || "-",
+                t.tipo,
+                `$${t.monto.toLocaleString("es-CO")}`
+            ];
+            tableRows.push(rowData);
+        });
+
+        autoTable(doc, {
+            startY: 60,
+            head: [tableColumn],
+            body: tableRows,
+            theme: 'striped',
+            headStyles: { fillColor: [79, 70, 229] },
+        });
+
+        doc.save(`Reporte_${selectedProyecto.nombre.replace(/\s+/g, '_')}.pdf`);
+    };
+
+    const handleUpdateTransaccion = async () => {
+        if (!formData.concepto || !formData.monto || !transaccionToEdit) {
+            toast.error("Por favor completa los campos requeridos");
+            return;
+        }
+
+        setIsSubmitting(true);
+        const res = await updateTransaccion(transaccionToEdit.id, {
+            concepto: formData.concepto,
+            monto: parseFloat(formData.monto),
+            tipo: formData.tipo as "INGRESO" | "EGRESO",
+            categoria: formData.categoria,
+            proyectoId: formData.proyectoId === "general" ? undefined : formData.proyectoId,
+            fecha: new Date(formData.fecha + "T12:00:00"),
+        });
+        setIsSubmitting(false);
+
+        if (res.success) {
+            toast.success("Transacción actualizada correctamente");
+            setIsEditDialogOpen(false);
+            setTransaccionToEdit(null);
+            setFormData({ concepto: "", monto: "", tipo: "EGRESO", categoria: "", proyectoId: "general", fecha: format(new Date(), "yyyy-MM-dd") });
+        } else {
+            toast.error(res.error || "Error al actualizar la transacción");
+        }
+    };
+
+    const openEditDialog = (t: any) => {
+        setTransaccionToEdit(t);
+        setFormData({
+            concepto: t.concepto,
+            monto: t.monto.toString(),
+            tipo: t.tipo,
+            categoria: t.categoria || "",
+            proyectoId: t.proyectoId || "general",
+            fecha: format(new Date(t.fecha), "yyyy-MM-dd"),
+        });
+        setIsEditDialogOpen(true);
+    };
 
     const handleCreateTransaccion = async () => {
         if (!formData.concepto || !formData.monto) {
@@ -242,14 +325,24 @@ export default function GastosClient({
                                         {t.monto.toLocaleString("es-CO")}
                                     </TableCell>
                                     <TableCell>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => handleDeleteTransaccion(t.id)}
-                                            className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
+                                        <div className="flex gap-1 justify-end">
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => openEditDialog(t)}
+                                                className="h-8 w-8 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50"
+                                            >
+                                                <Edit className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => handleDeleteTransaccion(t.id)}
+                                                className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             ))
@@ -295,14 +388,24 @@ export default function GastosClient({
                                         </Badge>
                                     )}
                                 </div>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => handleDeleteTransaccion(t.id)}
-                                    className="h-7 w-7 text-slate-400 hover:text-red-600 hover:bg-red-50 -mr-2"
-                                >
-                                    <Trash2 className="h-3 w-3" />
-                                </Button>
+                                <div className="flex gap-1 -mr-2">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => openEditDialog(t)}
+                                        className="h-7 w-7 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50"
+                                    >
+                                        <Edit className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => handleDeleteTransaccion(t.id)}
+                                        className="h-7 w-7 text-slate-400 hover:text-red-600 hover:bg-red-50"
+                                    >
+                                        <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     ))
@@ -539,13 +642,19 @@ export default function GastosClient({
                         <CardContent className="p-4 sm:p-6">
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2 mt-2">
                                 <h3 className="font-medium text-lg">Movimientos</h3>
-                                <Button className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700" onClick={() => {
-                                    setFormData({...formData, proyectoId: selectedProyecto.id});
-                                    setIsDialogOpen(true);
-                                }}>
-                                    <Plus className="h-4 w-4 mr-2" />
-                                    Registrar Gasto del Proyecto
-                                </Button>
+                                <div className="flex gap-2 w-full sm:w-auto">
+                                    <Button variant="outline" className="w-full sm:w-auto text-slate-600 border-slate-300 hover:bg-slate-50" onClick={handleDownloadPDF}>
+                                        <Download className="h-4 w-4 mr-2" />
+                                        Descargar Reporte
+                                    </Button>
+                                    <Button className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700" onClick={() => {
+                                        setFormData({...formData, proyectoId: selectedProyecto.id});
+                                        setIsDialogOpen(true);
+                                    }}>
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Registrar Gasto
+                                    </Button>
+                                </div>
                             </div>
 
                             {renderTable(filteredData)}
@@ -634,6 +743,97 @@ export default function GastosClient({
                         </Button>
                         <Button onClick={handleCreateTransaccion} disabled={isSubmitting} className="bg-indigo-600 hover:bg-indigo-700">
                             {isSubmitting ? "Guardando..." : "Guardar Registro"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal para Editar Transacción */}
+            <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
+                setIsEditDialogOpen(open);
+                if (!open) {
+                    setTransaccionToEdit(null);
+                    setFormData({ concepto: "", monto: "", tipo: "EGRESO", categoria: "", proyectoId: "general", fecha: format(new Date(), "yyyy-MM-dd") });
+                }
+            }}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Editar Transacción</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label>Asignar a</Label>
+                            <Select
+                                value={formData.proyectoId}
+                                onValueChange={(val) => setFormData({ ...formData, proyectoId: val })}
+                                disabled={selectedProyecto !== null} 
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Seleccione..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="general">Gastos Generales</SelectItem>
+                                    {proyectos.map(p => (
+                                        <SelectItem key={p.id} value={p.id}>{p.nombre}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Fecha</Label>
+                            <Input
+                                type="date"
+                                value={formData.fecha}
+                                onChange={(e) => setFormData({ ...formData, fecha: e.target.value })}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Tipo de Movimiento</Label>
+                            <Select
+                                value={formData.tipo}
+                                onValueChange={(val) => setFormData({ ...formData, tipo: val })}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Seleccione..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="INGRESO">Ingreso (+)</SelectItem>
+                                    <SelectItem value="EGRESO">Egreso (-)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Concepto</Label>
+                            <Input
+                                placeholder="Ej: Pago de papelería"
+                                value={formData.concepto}
+                                onChange={(e) => setFormData({ ...formData, concepto: e.target.value })}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Monto ($)</Label>
+                            <Input
+                                type="number"
+                                placeholder="0"
+                                value={formData.monto}
+                                onChange={(e) => setFormData({ ...formData, monto: e.target.value })}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Categoría (Opcional)</Label>
+                            <Input
+                                placeholder="Ej: Suministros"
+                                value={formData.categoria}
+                                onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={isSubmitting}>
+                            Cancelar
+                        </Button>
+                        <Button onClick={handleUpdateTransaccion} disabled={isSubmitting} className="bg-indigo-600 hover:bg-indigo-700">
+                            {isSubmitting ? "Actualizando..." : "Actualizar Registro"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

@@ -80,3 +80,32 @@ export async function deleteTransaccion(id: string) {
         return { success: false, error: "Error al eliminar transacción" };
     }
 }
+
+export async function updateTransaccion(id: string, data: {
+    concepto: string;
+    monto: number;
+    tipo: "INGRESO" | "EGRESO";
+    categoria?: string;
+    fecha?: Date;
+    proyectoId?: string;
+}) {
+    try {
+        const transaccionActualizada = await prisma.transaccion.update({
+            where: { id },
+            data: {
+                concepto: data.concepto,
+                monto: data.monto,
+                tipo: data.tipo,
+                categoria: data.categoria || null,
+                fecha: data.fecha || new Date(),
+                proyectoId: data.proyectoId || null,
+            },
+        });
+
+        revalidatePath("/gastos");
+        return { success: true, data: transaccionActualizada };
+    } catch (error) {
+        console.error("Error al actualizar transacción:", error);
+        return { success: false, error: "Error al actualizar transacción" };
+    }
+}
