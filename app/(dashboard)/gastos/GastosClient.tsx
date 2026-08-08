@@ -70,7 +70,7 @@ export default function GastosClient({
 
     const [projectData, setProjectData] = useState({
         nombre: "",
-        presupuesto: "",
+        presupuesto: "0",
         descripcion: "",
     });
 
@@ -114,39 +114,43 @@ export default function GastosClient({
     };
 
     const handleCreateProject = async () => {
-        if (!projectData.nombre || projectData.presupuesto === "" || projectData.presupuesto === undefined) {
-            toast.error("Nombre y presupuesto son obligatorios");
+        if (!projectData.nombre) {
+            toast.error("El nombre del proyecto es obligatorio");
             return;
         }
+
+        const pres = projectData.presupuesto === "" ? 0 : parseFloat(projectData.presupuesto);
 
         setIsSubmitting(true);
         const res = await createProyecto({
             nombre: projectData.nombre,
             descripcion: projectData.descripcion,
-            presupuesto: parseFloat(projectData.presupuesto),
+            presupuesto: pres,
         });
         setIsSubmitting(false);
 
         if (res.success) {
             toast.success("Proyecto creado correctamente");
             setIsProjectDialogOpen(false);
-            setProjectData({ nombre: "", presupuesto: "", descripcion: "" });
+            setProjectData({ nombre: "", presupuesto: "0", descripcion: "" });
         } else {
             toast.error(res.error || "Error al crear proyecto");
         }
     };
 
     const handleUpdateProject = async () => {
-        if (!projectToEdit?.nombre || projectToEdit?.presupuesto === "" || projectToEdit?.presupuesto === undefined) {
-            toast.error("Nombre y presupuesto son obligatorios");
+        if (!projectToEdit?.nombre) {
+            toast.error("El nombre del proyecto es obligatorio");
             return;
         }
+
+        const pres = projectToEdit.presupuesto === "" || projectToEdit.presupuesto === undefined ? 0 : parseFloat(projectToEdit.presupuesto);
 
         setIsSubmitting(true);
         const res = await updateProyecto(projectToEdit.id, {
             nombre: projectToEdit.nombre,
             descripcion: projectToEdit.descripcion,
-            presupuesto: parseFloat(projectToEdit.presupuesto),
+            presupuesto: pres,
         });
         setIsSubmitting(false);
 
