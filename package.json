@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma migrate deploy && prisma generate && next build --webpack",
+    "build": "bash scripts/migrate-deploy-retry.sh && prisma generate && next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "db:push": "prisma db push"
