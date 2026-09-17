@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Transaccion" ADD COLUMN "montoAbonado" DOUBLE PRECISION NOT NULL DEFAULT 0;

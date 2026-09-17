@@ -90,6 +90,10 @@ export async function updateTransaccion(id: string, data: {
     proyectoId?: string;
 }) {
     try {
+        // Si el monto de la deuda se reduce, el abono no puede quedar por encima del nuevo monto
+        const actual = await prisma.transaccion.findUnique({ where: { id } });
+        const montoAbonado = actual ? Math.min(actual.montoAbonado, data.monto) : 0;
+
         const transaccionActualizada = await prisma.transaccion.update({
             where: { id },
             data: {
@@ -99,6 +103,7 @@ export async function updateTransaccion(id: string, data: {
                 categoria: data.categoria || null,
                 fecha: data.fecha || new Date(),
                 proyectoId: data.proyectoId || null,
+                montoAbonado,
             },
         });
 
@@ -107,5 +112,50 @@ export async function updateTransaccion(id: string, data: {
     } catch (error) {
         console.error("Error al actualizar transacción:", error);
         return { success: false, error: "Error al actualizar transacción" };
+    }
+}
+
+export async function registrarAbono(id: string, monto: number) {
+    try {
+        const transaccion = await prisma.transaccion.findUnique({ where: { id } });
+        if (!transaccion) {
+            return { success: false, error: "Transacción no encontrada" };
+        }
+        if (!monto || monto <= 0) {
+            return { success: false, error: "El monto del abono debe ser mayor a cero" };
+        }
+
+        const nuevoMontoAbonado = Math.min(transaccion.monto, transaccion.montoAbonado + monto);
+
+        const transaccionActualizada = await prisma.transaccion.update({
+            where: { id },
+            data: { montoAbonado: nuevoMontoAbonado },
+        });
+
+        revalidatePath("/gastos");
+        return { success: true, data: transaccionActualizada };
+    } catch (error) {
+        console.error("Error al registrar abono:", error);
+        return { success: false, error: "Error al registrar abono" };
+    }
+}
+
+export async function marcarEstadoPago(id: string, pagado: boolean) {
+    try {
+        const transaccion = await prisma.transaccion.findUnique({ where: { id } });
+        if (!transaccion) {
+            return { success: false, error: "Transacción no encontrada" };
+        }
+
+        const transaccionActualizada = await prisma.transaccion.update({
+            where: { id },
+            data: { montoAbonado: pagado ? transaccion.monto : 0 },
+        });
+
+        revalidatePath("/gastos");
+        return { success: true, data: transaccionActualizada };
+    } catch (error) {
+        console.error("Error al actualizar estado de pago:", error);
+        return { success: false, error: "Error al actualizar estado de pago" };
     }
 }
