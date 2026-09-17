@@ -351,6 +351,43 @@ export default function GastosClient({
         );
     };
 
+    // Resumen de deudas (EGRESOS) de un conjunto de movimientos: cuánto se ha pagado y cuánto falta
+    const renderResumenPagos = (data: any[]) => {
+        const egresos = data.filter((t) => t.tipo === "EGRESO");
+        if (egresos.length === 0) return null;
+
+        const totalDeuda = egresos.reduce((sum, t) => sum + t.monto, 0);
+        const totalPagado = egresos.reduce((sum, t) => sum + Math.min(t.montoAbonado || 0, t.monto), 0);
+        const totalPendiente = totalDeuda - totalPagado;
+        const porcentajePagado = totalDeuda > 0 ? (totalPagado / totalDeuda) * 100 : 0;
+
+        return (
+            <div className="mb-4 p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <div>
+                        <p className="text-xs font-medium text-slate-500">Pagado</p>
+                        <p className="text-lg font-bold text-emerald-600">${totalPagado.toLocaleString("es-CO")}</p>
+                    </div>
+                    <div>
+                        <p className="text-xs font-medium text-slate-500">Falta por pagar</p>
+                        <p className="text-lg font-bold text-rose-600">${totalPendiente.toLocaleString("es-CO")}</p>
+                    </div>
+                    <div className="hidden sm:block">
+                        <p className="text-xs font-medium text-slate-500">Total deuda</p>
+                        <p className="text-lg font-bold text-slate-700 dark:text-slate-300">${totalDeuda.toLocaleString("es-CO")}</p>
+                    </div>
+                </div>
+                <div className="h-2 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden mt-3">
+                    <div
+                        className="h-full bg-emerald-500"
+                        style={{ width: `${Math.min(porcentajePagado, 100)}%` }}
+                    />
+                </div>
+                <p className="text-xs text-slate-400 mt-1">{porcentajePagado.toFixed(0)}% pagado</p>
+            </div>
+        );
+    };
+
     // Componente de tabla reutilizable y responsivo
     const renderTable = (data: any[]) => (
         <>
@@ -641,6 +678,7 @@ export default function GastosClient({
                                 Nuevo Registro General
                             </Button>
                         </div>
+                        {renderResumenPagos(filteredData)}
                         {renderTable(filteredData)}
                     </CardContent>
                 </Card>
@@ -793,6 +831,7 @@ export default function GastosClient({
                                 </div>
                             </div>
 
+                            {renderResumenPagos(filteredData)}
                             {renderTable(filteredData)}
                         </CardContent>
                     </Card>
