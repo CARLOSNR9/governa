@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Plus, Trash2, Search, ArrowUpCircle, ArrowDownCircle, Briefcase, ArrowLeft, TrendingUp, TrendingDown, DollarSign, Edit, Download } from "lucide-react";
+import { Plus, Trash2, Search, ArrowUpCircle, ArrowDownCircle, Briefcase, ArrowLeft, TrendingUp, TrendingDown, DollarSign, Edit, Download, CircleDollarSign, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
-import { createTransaccion, deleteTransaccion, updateTransaccion } from "@/app/actions/gastos";
+import { createTransaccion, deleteTransaccion, updateTransaccion, registrarAbono, marcarEstadoPago } from "@/app/actions/gastos";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { createProyecto, deleteProyecto, updateProyecto } from "@/app/actions/proyectos";
@@ -62,6 +62,11 @@ export default function GastosClient({
     const selectedProyecto = proyectos.find(p => p.id === selectedProjectId) || null;
     
     const [projectToEdit, setProjectToEdit] = useState<any | null>(null);
+
+    // Abonos / estado de pago de deudas (EGRESOS)
+    const [isAbonoDialogOpen, setIsAbonoDialogOpen] = useState(false);
+    const [transaccionParaAbono, setTransaccionParaAbono] = useState<any | null>(null);
+    const [montoAbono, setMontoAbono] = useState("");
 
     const [formData, setFormData] = useState({
         concepto: "",
@@ -264,6 +269,88 @@ export default function GastosClient({
         }
     };
 
+    // Estado de pago de una deuda (solo aplica a EGRESOS)
+    const getEstadoPago = (t: any): "PAGADO" | "PARCIAL" | "PENDIENTE" | null => {
+        if (t.tipo !== "EGRESO") return null;
+        const abonado = t.montoAbonado || 0;
+        if (abonado >= t.monto) return "PAGADO";
+        if (abonado > 0) return "PARCIAL";
+        return "PENDIENTE";
+    };
+
+    const getRowClass = (t: any) => {
+        const estado = getEstadoPago(t);
+        if (estado === "PAGADO") return "bg-emerald-50/70 dark:bg-emerald-950/20";
+        if (estado === "PARCIAL") return "bg-amber-50/70 dark:bg-amber-950/20";
+        return "";
+    };
+
+    const openAbonoDialog = (t: any) => {
+        setTransaccionParaAbono(t);
+        setMontoAbono("");
+        setIsAbonoDialogOpen(true);
+    };
+
+    const handleRegistrarAbono = async () => {
+        const monto = parseFloat(montoAbono);
+        if (!transaccionParaAbono || !montoAbono || isNaN(monto) || monto <= 0) {
+            toast.error("Ingresa un monto válido para el abono");
+            return;
+        }
+
+        setIsSubmitting(true);
+        const res = await registrarAbono(transaccionParaAbono.id, monto);
+        setIsSubmitting(false);
+
+        if (res.success) {
+            toast.success("Abono registrado correctamente");
+            setIsAbonoDialogOpen(false);
+            setTransaccionParaAbono(null);
+            setMontoAbono("");
+        } else {
+            toast.error(res.error || "Error al registrar el abono");
+        }
+    };
+
+    const handleMarcarEstadoPago = async (t: any, pagado: boolean) => {
+        const res = await marcarEstadoPago(t.id, pagado);
+        if (res.success) {
+            toast.success(pagado ? "Deuda marcada como pagada" : "Deuda marcada como pendiente");
+        } else {
+            toast.error(res.error || "Error al actualizar el estado de pago");
+        }
+    };
+
+    const renderEstadoPagoBadge = (t: any) => {
+        const estado = getEstadoPago(t);
+        if (!estado) return <span className="text-slate-400">-</span>;
+
+        if (estado === "PAGADO") {
+            return (
+                <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-none flex w-fit items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" /> Pagado
+                </Badge>
+            );
+        }
+        if (estado === "PARCIAL") {
+            return (
+                <div className="flex flex-col gap-0.5">
+                    <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-none flex w-fit items-center gap-1">
+                        <CircleDollarSign className="h-3 w-3" /> Abonado
+                    </Badge>
+                    <span className="text-[11px] text-slate-500">
+                        ${(t.montoAbonado || 0).toLocaleString("es-CO")} de ${t.monto.toLocaleString("es-CO")}
+                    </span>
+                </div>
+            );
+        }
+        return (
+            <Badge variant="outline" className="text-slate-500 border-slate-300 flex w-fit items-center gap-1">
+                Pendiente
+            </Badge>
+        );
+    };
+
     // Componente de tabla reutilizable y responsivo
     const renderTable = (data: any[]) => (
         <>
@@ -276,20 +363,21 @@ export default function GastosClient({
                             <TableHead>Concepto</TableHead>
                             <TableHead>Categoría</TableHead>
                             <TableHead>Tipo</TableHead>
+                            <TableHead>Estado de Pago</TableHead>
                             <TableHead className="text-right">Monto</TableHead>
-                            <TableHead className="w-[80px]"></TableHead>
+                            <TableHead className="w-[110px]"></TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {data.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={6} className="text-center py-8 text-slate-500">
+                                <TableCell colSpan={7} className="text-center py-8 text-slate-500">
                                     No hay registros que mostrar.
                                 </TableCell>
                             </TableRow>
                         ) : (
                             data.map((t) => (
-                                <TableRow key={t.id}>
+                                <TableRow key={t.id} className={getRowClass(t)}>
                                     <TableCell className="font-medium text-slate-600 dark:text-slate-300">
                                         {format(new Date(t.fecha), "dd MMM yyyy", { locale: es })}
                                     </TableCell>
@@ -314,6 +402,7 @@ export default function GastosClient({
                                             </Badge>
                                         )}
                                     </TableCell>
+                                    <TableCell>{renderEstadoPagoBadge(t)}</TableCell>
                                     <TableCell
                                         className={`text-right font-semibold ${
                                             t.tipo === "INGRESO"
@@ -326,6 +415,28 @@ export default function GastosClient({
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex gap-1 justify-end">
+                                            {t.tipo === "EGRESO" && getEstadoPago(t) !== "PAGADO" && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => openAbonoDialog(t)}
+                                                    title="Registrar abono"
+                                                    className="h-8 w-8 text-slate-400 hover:text-amber-600 hover:bg-amber-50"
+                                                >
+                                                    <CircleDollarSign className="h-4 w-4" />
+                                                </Button>
+                                            )}
+                                            {t.tipo === "EGRESO" && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => handleMarcarEstadoPago(t, getEstadoPago(t) !== "PAGADO")}
+                                                    title={getEstadoPago(t) === "PAGADO" ? "Marcar como pendiente" : "Marcar como pagado"}
+                                                    className={`h-8 w-8 hover:bg-emerald-50 ${getEstadoPago(t) === "PAGADO" ? "text-emerald-600" : "text-slate-400 hover:text-emerald-600"}`}
+                                                >
+                                                    <CheckCircle2 className="h-4 w-4" />
+                                                </Button>
+                                            )}
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
@@ -359,7 +470,7 @@ export default function GastosClient({
                     </div>
                 ) : (
                     data.map((t) => (
-                        <div key={t.id} className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm flex flex-col gap-3">
+                        <div key={t.id} className={`p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm flex flex-col gap-3 ${getRowClass(t)}`}>
                             <div className="flex justify-between items-start">
                                 <div>
                                     <p className="font-semibold text-slate-800 dark:text-slate-200">{t.concepto}</p>
@@ -371,6 +482,9 @@ export default function GastosClient({
                                     </p>
                                 </div>
                             </div>
+                            {t.tipo === "EGRESO" && (
+                                <div>{renderEstadoPagoBadge(t)}</div>
+                            )}
                             <div className="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-800">
                                 <div className="flex gap-2 flex-wrap">
                                     {t.tipo === "INGRESO" ? (
@@ -389,6 +503,28 @@ export default function GastosClient({
                                     )}
                                 </div>
                                 <div className="flex gap-1 -mr-2">
+                                    {t.tipo === "EGRESO" && getEstadoPago(t) !== "PAGADO" && (
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => openAbonoDialog(t)}
+                                            title="Registrar abono"
+                                            className="h-7 w-7 text-slate-400 hover:text-amber-600 hover:bg-amber-50"
+                                        >
+                                            <CircleDollarSign className="h-3 w-3" />
+                                        </Button>
+                                    )}
+                                    {t.tipo === "EGRESO" && (
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleMarcarEstadoPago(t, getEstadoPago(t) !== "PAGADO")}
+                                            title={getEstadoPago(t) === "PAGADO" ? "Marcar como pendiente" : "Marcar como pagado"}
+                                            className={`h-7 w-7 hover:bg-emerald-50 ${getEstadoPago(t) === "PAGADO" ? "text-emerald-600" : "text-slate-400 hover:text-emerald-600"}`}
+                                        >
+                                            <CheckCircle2 className="h-3 w-3" />
+                                        </Button>
+                                    )}
                                     <Button
                                         variant="ghost"
                                         size="icon"
@@ -834,6 +970,57 @@ export default function GastosClient({
                         </Button>
                         <Button onClick={handleUpdateTransaccion} disabled={isSubmitting} className="bg-indigo-600 hover:bg-indigo-700">
                             {isSubmitting ? "Actualizando..." : "Actualizar Registro"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal para Registrar Abono de una deuda (EGRESO) */}
+            <Dialog open={isAbonoDialogOpen} onOpenChange={(open) => {
+                setIsAbonoDialogOpen(open);
+                if (!open) {
+                    setTransaccionParaAbono(null);
+                    setMontoAbono("");
+                }
+            }}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Registrar Abono</DialogTitle>
+                    </DialogHeader>
+                    {transaccionParaAbono && (
+                        <div className="space-y-4 py-4">
+                            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 space-y-1">
+                                <p className="font-medium text-slate-800 dark:text-slate-200">{transaccionParaAbono.concepto}</p>
+                                <div className="flex justify-between text-sm text-slate-500">
+                                    <span>Deuda total</span>
+                                    <span>${transaccionParaAbono.monto.toLocaleString("es-CO")}</span>
+                                </div>
+                                <div className="flex justify-between text-sm text-slate-500">
+                                    <span>Ya abonado</span>
+                                    <span>${(transaccionParaAbono.montoAbonado || 0).toLocaleString("es-CO")}</span>
+                                </div>
+                                <div className="flex justify-between text-sm font-semibold text-rose-600">
+                                    <span>Pendiente</span>
+                                    <span>${(transaccionParaAbono.monto - (transaccionParaAbono.montoAbonado || 0)).toLocaleString("es-CO")}</span>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Monto a abonar ($)</Label>
+                                <Input
+                                    type="number"
+                                    placeholder="0"
+                                    value={montoAbono}
+                                    onChange={(e) => setMontoAbono(e.target.value)}
+                                />
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsAbonoDialogOpen(false)} disabled={isSubmitting}>
+                            Cancelar
+                        </Button>
+                        <Button onClick={handleRegistrarAbono} disabled={isSubmitting} className="bg-amber-600 hover:bg-amber-700">
+                            {isSubmitting ? "Guardando..." : "Registrar Abono"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
