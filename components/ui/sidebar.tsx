@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, PenTool, Users, Calendar, BarChart3, Settings, LogOut, BookUser, Wallet } from "lucide-react";
+import { LayoutDashboard, PenTool, Users, Calendar, BarChart3, Settings, LogOut, BookUser, Wallet, Calculator } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface NavItem {
@@ -19,6 +19,7 @@ const navItems: NavItem[] = [
     { href: "/agenda", label: "Agenda Inteligente", icon: Calendar },
     { href: "/directorio", label: "Directorio", icon: BookUser },
     { href: "/gastos", label: "Control de Gastos", icon: Wallet },
+    { href: "/simulador", label: "Simulador Presupuestal 2026", icon: Calculator },
     { href: "/analitica", label: "Analítica", icon: BarChart3 },
 ];
 

@@ -2,7 +2,7 @@
 
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu, PenTool, Users, Calendar, BarChart3, Settings, BookUser, Wallet } from "lucide-react";
+import { Menu, PenTool, Users, Calendar, BarChart3, Settings, BookUser, Wallet, Calculator } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,7 @@ const navItems: NavItem[] = [
     { href: "/agenda", label: "Agenda Inteligente", icon: Calendar },
     { href: "/directorio", label: "Directorio", icon: BookUser },
     { href: "/gastos", label: "Control de Gastos", icon: Wallet },
+    { href: "/simulador", label: "Simulador Presupuestal 2026", icon: Calculator },
     { href: "/analitica", label: "Analítica", icon: BarChart3 },
 ];
 
