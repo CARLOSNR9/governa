@@ -97,3 +97,84 @@ model Proyecto {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SIMULADOR PRESUPUESTAL – CIERRE DE VIGENCIA 2026
+// Herramienta de planeación (no contable). Todos los valores son pesos
+// colombianos ENTEROS (Int) para evitar errores de redondeo.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Configuración general del módulo (fila única id = "default").
+model SimConfig {
+  id               String   @id @default("default")
+  victimasRecursos Int      @default(0) // Recursos de Víctimas (destinación específica)
+  victimasMesa     Int      @default(0) // Actividades Mesa Municipal de Víctimas
+  victimasNotas    String?
+  modificadoPor    String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+// Catálogo de conceptos de gasto (compartido por todos los escenarios).
+model SimGasto {
+  id              String             @id @default(cuid())
+  nombre          String
+  categoria       String // DEPORTES, CULTURA, REGALOS_NAVIDAD, GOBIERNO_SOCIAL, ...
+  grupo           String             @default("PENDIENTE") // PENDIENTE, POR_CONFIRMAR, CUBIERTO_CDP, OTRA_VIGENCIA, RETIRADO
+  valorReferencia Int? // Valor presupuestado de referencia (null = por definir)
+  descripcion     String?
+  observaciones   String?
+  prioridad       String             @default("MEDIA") // ALTA, MEDIA, BAJA
+  orden           Int                @default(0)
+  creadoPor       String?
+  modificadoPor   String?
+  items           SimEscenarioItem[]
+  desglose        SimDesglose[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+}
+
+// Desglose interno opcional de una actividad.
+model SimDesglose {
+  id       String   @id @default(cuid())
+  gastoId  String
+  gasto    SimGasto @relation(fields: [gastoId], references: [id], onDelete: Cascade)
+  concepto String
+  valor    Int?
+  orden    Int      @default(0)
+}
+
+// Escenario presupuestal guardado. Cada escenario tiene su propia
+// disponibilidad y sus propias decisiones por gasto.
+model SimEscenario {
+  id            String             @id @default(cuid())
+  nombre        String
+  descripcion   String?
+  observaciones String?
+  bolsaInicial  Int
+  descuento     Int
+  bloqueado     Boolean            @default(false) // Escenario de referencia protegido contra cambios
+  orden         Int                @default(0)
+  creadoPor     String?
+  modificadoPor String?
+  items         SimEscenarioItem[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+}
+
+// Decisión sobre un gasto dentro de un escenario.
+model SimEscenarioItem {
+  id            String       @id @default(cuid())
+  escenarioId   String
+  escenario     SimEscenario @relation(fields: [escenarioId], references: [id], onDelete: Cascade)
+  gastoId       String
+  gasto         SimGasto     @relation(fields: [gastoId], references: [id], onDelete: Cascade)
+  incluido      Boolean      @default(true)
+  valor         Int?
+  estado        String       @default("PENDIENTE") // PENDIENTE, APROBADO, DESCARTADO, REDUCIDO
+  observaciones String?
+  updatedAt     DateTime     @updatedAt
+
+  @@unique([escenarioId, gastoId])
+  @@index([gastoId])
+}
