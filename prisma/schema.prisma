@@ -99,9 +99,22 @@ model Proyecto {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SIMULADOR PRESUPUESTAL – CIERRE DE VIGENCIA 2026
-// Herramienta de planeación (no contable). Todos los valores son pesos
-// colombianos ENTEROS (Int) para evitar errores de redondeo.
+// PRESUPUESTO 2026 – Consolidado general de gastos (cierre de vigencia)
+// Una sola hoja editable guardada como documento JSON. Valores en pesos enteros.
+// ─────────────────────────────────────────────────────────────────────────────
+model PresupuestoCierre {
+  id            String   @id @default("cierre-2026")
+  datos         Json
+  version       Int      @default(1)
+  modificadoPor String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OBSOLETO: tablas del primer "Simulador Presupuestal" (reemplazado por
+// PresupuestoCierre). Ya no se usan en el código; se conservan para no borrar
+// datos de producción sin autorización. Se pueden eliminar con una migración.
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Configuración general del módulo (fila única id = "default").
