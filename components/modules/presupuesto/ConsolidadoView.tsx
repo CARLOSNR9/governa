@@ -271,7 +271,17 @@ export function ConsolidadoView({ inicial, permisos }: { inicial: PresupuestoGua
                                 onCambio={(v) => mutar((d) => void (d.secciones.find((x) => x.id === s.id)!.titulo = v))}
                             />
                         </h2>
-                        {s.nota && <p className="mb-2 text-sm text-slate-600">{s.nota}</p>}
+                        {(s.nota || editable) && (
+                            <div className="mb-2 text-sm text-slate-600">
+                                <CeldaTexto
+                                    etiqueta={`Nota de la sección ${s.titulo}`}
+                                    valor={s.nota}
+                                    editable={editable}
+                                    placeholder="Agregar nota de la sección"
+                                    onCambio={(t) => mutar((d) => void (d.secciones.find((x) => x.id === s.id)!.nota = t))}
+                                />
+                            </div>
+                        )}
                         <div className="overflow-x-auto">
                             <table className="w-full min-w-[640px] border-collapse text-sm">
                                 <thead>
@@ -396,7 +406,16 @@ export function ConsolidadoView({ inicial, permisos }: { inicial: PresupuestoGua
                                                                     onCambio={(x) => cambiarConcepto(s.id, c.id, (y) => void (y.detalles!.find((z) => z.id === dt.id)!.valor = x))}
                                                                 />
                                                             </td>
-                                                            <td className={TD} />
+                                                            <td className={cn(TD, "text-slate-600")}>
+                                                                <CeldaTexto
+                                                                    etiqueta={`Observación de ${dt.nombre} (${c.nombre})`}
+                                                                    valor={dt.nota ?? ""}
+                                                                    editable={editable}
+                                                                    placeholder={editable ? "Agregar observación" : "—"}
+                                                                    className="text-[13px]"
+                                                                    onCambio={(t) => cambiarConcepto(s.id, c.id, (y) => void (y.detalles!.find((z) => z.id === dt.id)!.nota = t))}
+                                                                />
+                                                            </td>
                                                             {editable && (
                                                                 <td className={cn(TD, "text-center")}>
                                                                     <BotonBorrar
@@ -418,7 +437,7 @@ export function ConsolidadoView({ inicial, permisos }: { inicial: PresupuestoGua
                                                             <button
                                                                 type="button"
                                                                 className="text-xs text-indigo-600 hover:underline"
-                                                                onClick={() => cambiarConcepto(s.id, c.id, (x) => void x.detalles!.push({ id: nuevoId(), nombre: "Nuevo ítem", valor: null, incluido: true }))}
+                                                                onClick={() => cambiarConcepto(s.id, c.id, (x) => void x.detalles!.push({ id: nuevoId(), nombre: "Nuevo ítem", valor: null, incluido: true, nota: "" }))}
                                                             >
                                                                 + Agregar ítem a “{c.nombre}”
                                                             </button>
@@ -528,7 +547,9 @@ export function ConsolidadoView({ inicial, permisos }: { inicial: PresupuestoGua
                     </tr>
                 </tbody>
             </table>
-            <p className="mt-1 text-sm text-slate-600">{doc.victimas.nota}</p>
+            <div className="mt-1 text-sm text-slate-600">
+                <CeldaTexto etiqueta="Nota de Víctimas" valor={doc.victimas.nota} editable={editable} placeholder="Agregar observación" onCambio={(t) => mutar((d) => void (d.victimas.nota = t))} />
+            </div>
 
             <h3 className="mb-1 mt-5 font-semibold text-slate-800">Por confirmar (no se suman a la bolsa)</h3>
             {tablaInfo("porConfirmar", { nombre: "Concepto", valor: "Valor", nota: "Observación" })}

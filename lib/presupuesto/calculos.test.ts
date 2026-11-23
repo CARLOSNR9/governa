@@ -116,3 +116,13 @@ test("los datos iniciales cumplen la validación del servidor", () => {
     malo.bolsaInicial = -5;
     assert.equal(esquemaPresupuesto.safeParse(malo).success, false);
 });
+
+test("observaciones en las líneas del desglose (y documentos guardados sin ellas)", () => {
+    const p = presupuestoInicial();
+    const linea = con(p, "Concurso de afiche").detalles![0];
+    linea.nota = "Pago al ganador el 15 de diciembre";
+    assert.ok(esquemaPresupuesto.safeParse(p).success);
+    delete linea.nota; // formato anterior, sin el campo
+    assert.ok(esquemaPresupuesto.safeParse(p).success);
+    assert.equal(valorConcepto(con(p, "Concurso de afiche")), 2_500_000);
+});

@@ -3,7 +3,7 @@ import type { Concepto, Detalle, FilaInfo, Presupuesto } from "./tipos";
 
 let n = 0;
 const id = (p: string) => `${p}-${++n}`;
-const det = (lineas: [string, number][]): Detalle[] => lineas.map(([nombre, valor]) => ({ id: id("d"), nombre, valor, incluido: true }));
+const det = (lineas: [string, number][]): Detalle[] => lineas.map(([nombre, valor]) => ({ id: id("d"), nombre, valor, incluido: true, nota: "" }));
 const con = (nombre: string, valor: number | null, nota = "", extra: Partial<Concepto> = {}): Concepto => ({
     id: id("c"),
     nombre,

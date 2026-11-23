@@ -12,6 +12,8 @@ export interface Detalle {
     nombre: string;
     valor: number | null;
     incluido: boolean;
+    /** Observación de la línea (opcional: los documentos guardados antes no la tienen). */
+    nota?: string;
 }
 
 /** Concepto de gasto dentro de una sección de la bolsa general. */

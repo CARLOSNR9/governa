@@ -5,7 +5,7 @@ const valor = z.number().int().min(0).max(VALOR_MAXIMO);
 const id = z.string().min(1).max(80);
 const texto = (max: number) => z.string().max(max);
 
-const detalle = z.object({ id, nombre: texto(200), valor: valor.nullable(), incluido: z.boolean() });
+const detalle = z.object({ id, nombre: texto(200), valor: valor.nullable(), incluido: z.boolean(), nota: texto(500).optional() });
 
 const concepto = z.object({
     id,

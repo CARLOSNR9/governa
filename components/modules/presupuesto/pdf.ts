@@ -97,7 +97,7 @@ export function descargarPDF(p: Presupuesto, usuario: string) {
                         "",
                         { content: `    ${d.nombre}`, styles: e },
                         { content: d.valor === null ? "Por definir" : formatCOP(d.valor), styles: { halign: "right", ...e } },
-                        { content: d.incluido ? "" : "No incluido", styles: e },
+                        { content: d.incluido ? d.nota ?? "" : `No incluido${d.nota ? ` · ${d.nota}` : ""}`, styles: e },
                     ]);
                 }
             }
