@@ -2,6 +2,7 @@
 
 // Consolidado general de gastos – Cierre 2026: lectura y guardado.
 import prisma from "@/lib/prisma";
+import { normalizarPresupuesto } from "@/lib/presupuesto/calculos";
 import { presupuestoInicial } from "@/lib/presupuesto/datos-iniciales";
 import { obtenerPermisos } from "@/lib/presupuesto/permisos";
 import type { Permisos, Presupuesto, PresupuestoGuardado } from "@/lib/presupuesto/tipos";
@@ -12,7 +13,8 @@ const ID = "cierre-2026";
 type Resultado<T> = { success: true; data: T } | { success: false; error: string; conflicto?: boolean };
 
 function serializar(r: { datos: unknown; version: number; modificadoPor: string | null; updatedAt: Date }): PresupuestoGuardado {
-    return { datos: r.datos as Presupuesto, version: r.version, modificadoPor: r.modificadoPor, updatedAt: r.updatedAt.toISOString() };
+    // Documentos guardados con el formato anterior reciben cantidad 1 y valor unitario = total.
+    return { datos: normalizarPresupuesto(r.datos as Presupuesto), version: r.version, modificadoPor: r.modificadoPor, updatedAt: r.updatedAt.toISOString() };
 }
 
 export async function getPresupuesto(): Promise<Resultado<{ guardado: PresupuestoGuardado; permisos: Permisos }>> {

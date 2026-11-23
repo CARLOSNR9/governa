@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { guardarPresupuesto, restablecerPresupuesto } from "@/app/actions/presupuesto";
-import { brutoSeccion, calcularResumen, totalFilas, totalSeccion, valorConcepto } from "@/lib/presupuesto/calculos";
-import { ENTIDAD, TITULO, formatCOP, formatPorcentajePb, nuevoId, type Concepto, type FilaInfo, type Permisos, type Presupuesto, type PresupuestoGuardado } from "@/lib/presupuesto/tipos";
+import { brutoSeccion, calcularResumen, totalFilas, totalItem, totalSeccion, usaCantidad, valorConcepto } from "@/lib/presupuesto/calculos";
+import { CANTIDAD_MAXIMA, ENTIDAD, TITULO, formatCOP, formatPorcentajePb, nuevoId, type ConCantidad, type Concepto, type FilaInfo, type Permisos, type Presupuesto, type PresupuestoGuardado } from "@/lib/presupuesto/tipos";
 import { Casilla, CeldaTexto, CeldaValor } from "./Celdas";
 import { descargarPDF } from "./pdf";
 
@@ -86,6 +86,14 @@ export function ConsolidadoView({ inicial, permisos }: { inicial: PresupuestoGua
     const buscarConcepto = (d: Presupuesto, sId: string, cId: string) => d.secciones.find((s) => s.id === sId)!.conceptos.find((c) => c.id === cId)!;
     const cambiarConcepto = (sId: string, cId: string, fn: (c: Concepto) => void) => mutar((d) => fn(buscarConcepto(d, sId, cId)));
     const listaInfo = (d: Presupuesto, clave: "cdp" | "porConfirmar" | "retirados") => d[clave];
+    /** Cambia cantidad o valor unitario y recalcula el total del ítem. */
+    const fijar = (x: ConCantidad & { valor: number | null }, campo: "cantidad" | "valorUnitario", v: number | null) => {
+        if (campo === "cantidad") x.cantidad = Math.min(v ?? 0, CANTIDAD_MAXIMA);
+        else x.valorUnitario = v;
+        if (x.cantidad === undefined) x.cantidad = 1;
+        if (x.valorUnitario === undefined) x.valorUnitario = null;
+        x.valor = totalItem(x);
+    };
 
     const pedirConfirmacion = (titulo: string, texto: string, accion: () => void) => setConfirmar({ titulo, texto, accion });
 
@@ -271,16 +279,28 @@ export function ConsolidadoView({ inicial, permisos }: { inicial: PresupuestoGua
                                 onCambio={(v) => mutar((d) => void (d.secciones.find((x) => x.id === s.id)!.titulo = v))}
                             />
                         </h2>
-                        {s.nota && <p className="mb-2 text-sm text-slate-600">{s.nota}</p>}
+                        {(s.nota || editable) && (
+                            <div className="mb-2 text-sm text-slate-600">
+                                <CeldaTexto
+                                    etiqueta={`Nota de la sección ${s.titulo}`}
+                                    valor={s.nota}
+                                    editable={editable}
+                                    placeholder="Agregar nota de la sección"
+                                    onCambio={(t) => mutar((d) => void (d.secciones.find((x) => x.id === s.id)!.nota = t))}
+                                />
+                            </div>
+                        )}
                         <div className="overflow-x-auto">
-                            <table className="w-full min-w-[640px] border-collapse text-sm">
+                            <table className="w-full min-w-[900px] border-collapse text-sm">
                                 <thead>
                                     <tr>
                                         <th className={cn(TH, "w-10 text-center")} title="Incluir en la suma">✓</th>
                                         <th className={cn(TH, "w-12 text-center")}>N.º</th>
                                         <th className={TH}>Concepto</th>
-                                        <th className={cn(TH, "w-40 text-right")}>Valor</th>
-                                        <th className={cn(TH, "w-64")}>Estado / observación</th>
+                                        <th className={cn(TH, "w-24 text-right")}>Cant.</th>
+                                        <th className={cn(TH, "w-32 text-right")}>Valor unitario</th>
+                                        <th className={cn(TH, "w-36 text-right")}>Total</th>
+                                        <th className={cn(TH, "w-56")}>Estado / observación</th>
                                         {editable && <th className={cn(TH, "w-10")} />}
                                     </tr>
                                 </thead>
@@ -306,47 +326,54 @@ export function ConsolidadoView({ inicial, permisos }: { inicial: PresupuestoGua
                                                             )}
                                                             <div className="min-w-0 flex-1">
                                                                 <CeldaTexto etiqueta="Concepto" valor={c.nombre} editable={editable} className={cn(!c.incluido && "line-through")} onCambio={(t) => cambiarConcepto(s.id, c.id, (x) => void (x.nombre = t))} />
-                                                                {c.calculo && (
-                                                                    <div className="mt-1 flex flex-wrap items-center gap-1.5 pl-1 text-xs font-normal text-slate-600">
-                                                                        <span className="w-24">
-                                                                            <CeldaValor
-                                                                                etiqueta="Cantidad"
-                                                                                valor={c.calculo.cantidad}
-                                                                                editable={editable}
-                                                                                className="border border-slate-200 bg-white [&]:justify-end"
-                                                                                onCambio={(q) => cambiarConcepto(s.id, c.id, (x) => void (x.calculo!.cantidad = Math.min(q ?? 0, 1_000_000)))}
-                                                                            />
-                                                                        </span>
-                                                                        {c.calculo.etiquetaCantidad} ×
-                                                                        <span className="w-28">
-                                                                            <CeldaValor
-                                                                                etiqueta="Valor unitario"
-                                                                                valor={c.calculo.valorUnitario}
-                                                                                editable={editable}
-                                                                                className="border border-slate-200 bg-white"
-                                                                                onCambio={(q) => cambiarConcepto(s.id, c.id, (x) => void (x.calculo!.valorUnitario = q ?? 0))}
-                                                                            />
-                                                                        </span>
-                                                                        {c.calculo.etiquetaUnitario}
-                                                                    </div>
-                                                                )}
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className={TD}>
-                                                        {conDesglose || c.calculo ? (
-                                                            <span className={cn("block px-2 text-right tabular-nums", !c.incluido && "line-through")}>{formatCOP(v)}</span>
-                                                        ) : (
-                                                            <CeldaValor
-                                                                etiqueta={`Valor de ${c.nombre}`}
-                                                                valor={c.valor}
-                                                                negativo={c.deduccion}
-                                                                editable={editable}
-                                                                className={cn(!c.incluido && "line-through")}
-                                                                onCambio={(x) => cambiarConcepto(s.id, c.id, (y) => void (y.valor = x))}
-                                                            />
-                                                        )}
-                                                    </td>
+                                                    {usaCantidad(c) ? (
+                                                        <>
+                                                            <td className={cn(TD, "font-normal")}>
+                                                                <CeldaValor
+                                                                    sinMoneda
+                                                                    etiqueta={`Cantidad de ${c.nombre}`}
+                                                                    valor={c.cantidad ?? 1}
+                                                                    editable={editable}
+                                                                    onCambio={(q) => cambiarConcepto(s.id, c.id, (x) => fijar(x, "cantidad", q))}
+                                                                />
+                                                            </td>
+                                                            <td className={cn(TD, "font-normal")}>
+                                                                <CeldaValor
+                                                                    etiqueta={`Valor unitario de ${c.nombre}`}
+                                                                    valor={c.valorUnitario === undefined ? c.valor : c.valorUnitario}
+                                                                    editable={editable}
+                                                                    onCambio={(q) => cambiarConcepto(s.id, c.id, (x) => fijar(x, "valorUnitario", q))}
+                                                                />
+                                                            </td>
+                                                            <td className={TD}>
+                                                                <span className={cn("block px-2 text-right font-semibold tabular-nums", v === null && "font-normal italic text-slate-400", !c.incluido && "line-through")}>
+                                                                    {formatCOP(v)}
+                                                                </span>
+                                                            </td>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <td className={TD} />
+                                                            <td className={TD} />
+                                                            <td className={TD}>
+                                                                {c.deduccion ? (
+                                                                    <CeldaValor
+                                                                        etiqueta={`Valor de ${c.nombre}`}
+                                                                        valor={c.valor}
+                                                                        negativo
+                                                                        editable={editable}
+                                                                        className={cn(!c.incluido && "line-through")}
+                                                                        onCambio={(x) => cambiarConcepto(s.id, c.id, (y) => void (y.valor = x))}
+                                                                    />
+                                                                ) : (
+                                                                    <span className={cn("block px-2 text-right tabular-nums", !c.incluido && "line-through")}>{formatCOP(v)}</span>
+                                                                )}
+                                                            </td>
+                                                        </>
+                                                    )}
                                                     <td className={cn(TD, "font-normal text-slate-600")}>
                                                         <CeldaTexto etiqueta="Estado u observación" valor={c.nota} editable={editable} className="text-sm" onCambio={(t) => cambiarConcepto(s.id, c.id, (x) => void (x.nota = t))} />
                                                     </td>
@@ -389,14 +416,36 @@ export function ConsolidadoView({ inicial, permisos }: { inicial: PresupuestoGua
                                                             </td>
                                                             <td className={TD}>
                                                                 <CeldaValor
-                                                                    etiqueta={`Valor de ${dt.nombre} (${c.nombre})`}
-                                                                    valor={dt.valor}
+                                                                    sinMoneda
+                                                                    etiqueta={`Cantidad de ${dt.nombre} (${c.nombre})`}
+                                                                    valor={dt.cantidad ?? 1}
                                                                     editable={editable}
-                                                                    className={cn(!dt.incluido && "line-through")}
-                                                                    onCambio={(x) => cambiarConcepto(s.id, c.id, (y) => void (y.detalles!.find((z) => z.id === dt.id)!.valor = x))}
+                                                                    onCambio={(q) => cambiarConcepto(s.id, c.id, (y) => fijar(y.detalles!.find((z) => z.id === dt.id)!, "cantidad", q))}
                                                                 />
                                                             </td>
-                                                            <td className={TD} />
+                                                            <td className={TD}>
+                                                                <CeldaValor
+                                                                    etiqueta={`Valor unitario de ${dt.nombre} (${c.nombre})`}
+                                                                    valor={dt.valorUnitario === undefined ? dt.valor : dt.valorUnitario}
+                                                                    editable={editable}
+                                                                    onCambio={(q) => cambiarConcepto(s.id, c.id, (y) => fijar(y.detalles!.find((z) => z.id === dt.id)!, "valorUnitario", q))}
+                                                                />
+                                                            </td>
+                                                            <td className={TD}>
+                                                                <span className={cn("block px-2 text-right tabular-nums", totalItem(dt) === null && "italic text-slate-400", !dt.incluido && "line-through")}>
+                                                                    {formatCOP(totalItem(dt))}
+                                                                </span>
+                                                            </td>
+                                                            <td className={cn(TD, "text-slate-600")}>
+                                                                <CeldaTexto
+                                                                    etiqueta={`Observación de ${dt.nombre} (${c.nombre})`}
+                                                                    valor={dt.nota ?? ""}
+                                                                    editable={editable}
+                                                                    placeholder={editable ? "Agregar observación" : "—"}
+                                                                    className="text-[13px]"
+                                                                    onCambio={(t) => cambiarConcepto(s.id, c.id, (y) => void (y.detalles!.find((z) => z.id === dt.id)!.nota = t))}
+                                                                />
+                                                            </td>
                                                             {editable && (
                                                                 <td className={cn(TD, "text-center")}>
                                                                     <BotonBorrar
@@ -414,11 +463,11 @@ export function ConsolidadoView({ inicial, permisos }: { inicial: PresupuestoGua
                                                     <tr className="bg-white">
                                                         <td className={TD} />
                                                         <td className={TD} />
-                                                        <td className={cn(TD, "pl-9")} colSpan={editable ? 4 : 3}>
+                                                        <td className={cn(TD, "pl-9")} colSpan={6}>
                                                             <button
                                                                 type="button"
                                                                 className="text-xs text-indigo-600 hover:underline"
-                                                                onClick={() => cambiarConcepto(s.id, c.id, (x) => void x.detalles!.push({ id: nuevoId(), nombre: "Nuevo ítem", valor: null, incluido: true }))}
+                                                                onClick={() => cambiarConcepto(s.id, c.id, (x) => void x.detalles!.push({ id: nuevoId(), nombre: "Nuevo ítem", cantidad: 1, valorUnitario: null, valor: null, incluido: true, nota: "" }))}
                                                             >
                                                                 + Agregar ítem a “{c.nombre}”
                                                             </button>
@@ -432,7 +481,7 @@ export function ConsolidadoView({ inicial, permisos }: { inicial: PresupuestoGua
                                 <tfoot>
                                     {tieneDeduccion && (
                                         <tr className="bg-slate-50 text-slate-600">
-                                            <td className={TD} colSpan={3}>
+                                            <td className={TD} colSpan={5}>
                                                 Total compromisos
                                             </td>
                                             <td className={cn(TD, "px-4 text-right tabular-nums")}>{formatCOP(brutoSeccion(s))}</td>
@@ -440,7 +489,7 @@ export function ConsolidadoView({ inicial, permisos }: { inicial: PresupuestoGua
                                         </tr>
                                     )}
                                     <tr className="bg-indigo-50 font-bold">
-                                        <td className={TD} colSpan={3}>
+                                        <td className={TD} colSpan={5}>
                                             {tieneDeduccion ? "Total a cargo de la bolsa general" : "Total"}
                                         </td>
                                         <td className={cn(TD, "px-4 text-right tabular-nums")}>{formatCOP(totalSeccion(s))}</td>
@@ -454,7 +503,7 @@ export function ConsolidadoView({ inicial, permisos }: { inicial: PresupuestoGua
                                 onClick={() =>
                                     mutar((d) => {
                                         const lista = d.secciones.find((x) => x.id === s.id)!.conceptos;
-                                        const nuevo: Concepto = { id: nuevoId(), nombre: "Nuevo gasto", incluido: true, valor: null, nota: "" };
+                                        const nuevo: Concepto = { id: nuevoId(), nombre: "Nuevo gasto", incluido: true, cantidad: 1, valorUnitario: null, valor: null, nota: "" };
                                         // Los gastos nuevos van antes de la fila de deducción (CDP), si existe.
                                         const iDeduccion = lista.findIndex((x) => x.deduccion);
                                         if (iDeduccion >= 0) lista.splice(iDeduccion, 0, nuevo);
@@ -528,7 +577,9 @@ export function ConsolidadoView({ inicial, permisos }: { inicial: PresupuestoGua
                     </tr>
                 </tbody>
             </table>
-            <p className="mt-1 text-sm text-slate-600">{doc.victimas.nota}</p>
+            <div className="mt-1 text-sm text-slate-600">
+                <CeldaTexto etiqueta="Nota de Víctimas" valor={doc.victimas.nota} editable={editable} placeholder="Agregar observación" onCambio={(t) => mutar((d) => void (d.victimas.nota = t))} />
+            </div>
 
             <h3 className="mb-1 mt-5 font-semibold text-slate-800">Por confirmar (no se suman a la bolsa)</h3>
             {tablaInfo("porConfirmar", { nombre: "Concepto", valor: "Valor", nota: "Observación" })}
