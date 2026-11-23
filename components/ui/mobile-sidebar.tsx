@@ -21,7 +21,7 @@ const navItems: NavItem[] = [
     { href: "/agenda", label: "Agenda Inteligente", icon: Calendar },
     { href: "/directorio", label: "Directorio", icon: BookUser },
     { href: "/gastos", label: "Control de Gastos", icon: Wallet },
-    { href: "/simulador", label: "Simulador Presupuestal 2026", icon: Calculator },
+    { href: "/presupuesto", label: "Presupuesto 2026", icon: Calculator },
     { href: "/analitica", label: "Analítica", icon: BarChart3 },
 ];
 
