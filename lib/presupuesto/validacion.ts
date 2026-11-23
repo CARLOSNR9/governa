@@ -1,17 +1,22 @@
 import { z } from "zod";
-import { VALOR_MAXIMO } from "./tipos";
+import { CANTIDAD_MAXIMA, VALOR_MAXIMO } from "./tipos";
 
 const valor = z.number().int().min(0).max(VALOR_MAXIMO);
 const id = z.string().min(1).max(80);
 const texto = (max: number) => z.string().max(max);
+const cantidad = z.number().int().min(0).max(CANTIDAD_MAXIMA).optional();
+// El total puede superar el valor máximo de un campo (cantidad × unitario), pero no el rango seguro.
+const total = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
 
-const detalle = z.object({ id, nombre: texto(200), valor: valor.nullable(), incluido: z.boolean(), nota: texto(500).optional() });
+const detalle = z.object({ id, nombre: texto(200), valor: total.nullable(), incluido: z.boolean(), nota: texto(500).optional(), cantidad, valorUnitario: valor.nullable().optional() });
 
 const concepto = z.object({
     id,
     nombre: texto(250),
     incluido: z.boolean(),
-    valor: valor.nullable(),
+    valor: total.nullable(),
+    cantidad,
+    valorUnitario: valor.nullable().optional(),
     nota: texto(500),
     detalles: z.array(detalle).max(100).optional(),
     calculo: z

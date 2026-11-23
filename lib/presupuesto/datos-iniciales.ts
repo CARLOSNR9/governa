@@ -3,11 +3,14 @@ import type { Concepto, Detalle, FilaInfo, Presupuesto } from "./tipos";
 
 let n = 0;
 const id = (p: string) => `${p}-${++n}`;
-const det = (lineas: [string, number][]): Detalle[] => lineas.map(([nombre, valor]) => ({ id: id("d"), nombre, valor, incluido: true, nota: "" }));
+const det = (lineas: [string, number][]): Detalle[] => lineas.map(([nombre, valor]) => ({ id: id("d"), nombre, cantidad: 1, valorUnitario: valor, valor, incluido: true, nota: "" }));
 const con = (nombre: string, valor: number | null, nota = "", extra: Partial<Concepto> = {}): Concepto => ({
     id: id("c"),
     nombre,
     incluido: true,
+    // Cantidad 1 y valor unitario = total; se ajustan cuando se conozcan las unidades.
+    cantidad: extra.detalles || extra.deduccion ? undefined : 1,
+    valorUnitario: extra.detalles || extra.deduccion ? undefined : valor,
     valor,
     nota,
     ...extra,
@@ -93,8 +96,9 @@ export function presupuestoInicial(): Presupuesto {
                             ["Gaseosas para artesanos", 100_000],
                         ]),
                     }),
-                    con("Compra de regalos de Navidad para niños", null, "Número de niños por confirmar (puede subir a 1.600 o más)", {
-                        calculo: { cantidad: 1_550, valorUnitario: 20_000, etiquetaCantidad: "niños", etiquetaUnitario: "por regalo" },
+                    con("Compra de regalos de Navidad para niños", 31_000_000, "Cantidad = número de niños, por confirmar (puede subir a 1.600 o más)", {
+                        cantidad: 1_550,
+                        valorUnitario: 20_000,
                     }),
                 ],
             },

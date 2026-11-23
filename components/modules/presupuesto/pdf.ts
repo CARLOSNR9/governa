@@ -3,8 +3,8 @@ import jsPDF from "jspdf";
 import autoTable, { type RowInput } from "jspdf-autotable";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { brutoSeccion, calcularResumen, totalFilas, totalSeccion, valorConcepto } from "@/lib/presupuesto/calculos";
-import { AVISO, ENTIDAD, TITULO, formatCOP, formatPorcentajePb, type FilaInfo, type Presupuesto } from "@/lib/presupuesto/tipos";
+import { brutoSeccion, calcularResumen, totalFilas, totalItem, totalSeccion, usaCantidad, valorConcepto } from "@/lib/presupuesto/calculos";
+import { AVISO, ENTIDAD, TITULO, formatCOP, formatEntero, formatPorcentajePb, type FilaInfo, type Presupuesto } from "@/lib/presupuesto/tipos";
 
 const AZUL: [number, number, number] = [30, 41, 99];
 const GRIS: [number, number, number] = [148, 163, 184];
@@ -82,11 +82,15 @@ export function descargarPDF(p: Presupuesto, usuario: string) {
         for (const c of s.conceptos) {
             const v = valorConcepto(c);
             const fuera = !c.incluido;
-            const nombre = c.calculo ? `${c.nombre} (${c.calculo.cantidad.toLocaleString("es-CO")} ${c.calculo.etiquetaCantidad} × ${formatCOP(c.calculo.valorUnitario)})` : c.nombre;
+            const nombre = c.nombre;
+            const cant = usaCantidad(c) ? formatEntero(c.cantidad ?? 1) : "";
+            const unit = usaCantidad(c) ? (c.valorUnitario === undefined ? formatCOP(c.valor) : formatCOP(c.valorUnitario)) : "";
             const estiloFila = fuera ? { textColor: GRIS, fontStyle: "italic" as const } : c.detalles?.length ? { fontStyle: "bold" as const } : {};
             filas.push([
                 { content: c.deduccion ? "" : String(++n), styles: { halign: "center", ...estiloFila } },
                 { content: nombre, styles: estiloFila },
+                { content: cant, styles: { halign: "right", ...estiloFila } },
+                { content: unit, styles: { halign: "right", ...estiloFila } },
                 { content: v === null ? "Por definir" : `${c.deduccion ? "-" : ""}${formatCOP(v)}`, styles: { halign: "right", ...estiloFila } },
                 { content: fuera ? `NO INCLUIDO${c.nota ? ` · ${c.nota}` : ""}` : c.nota, styles: estiloFila },
             ]);
@@ -96,22 +100,25 @@ export function descargarPDF(p: Presupuesto, usuario: string) {
                     filas.push([
                         "",
                         { content: `    ${d.nombre}`, styles: e },
-                        { content: d.valor === null ? "Por definir" : formatCOP(d.valor), styles: { halign: "right", ...e } },
+                        { content: formatEntero(d.cantidad ?? 1), styles: { halign: "right", ...e } },
+                        { content: formatCOP(d.valorUnitario === undefined ? d.valor : d.valorUnitario), styles: { halign: "right", ...e } },
+                        { content: formatCOP(totalItem(d)), styles: { halign: "right", ...e } },
                         { content: d.incluido ? d.nota ?? "" : `No incluido${d.nota ? ` · ${d.nota}` : ""}`, styles: e },
                     ]);
                 }
             }
         }
         const pie: RowInput[] = [];
-        if (s.conceptos.some((c) => c.deduccion)) pie.push(["", "Total compromisos", { content: formatCOP(brutoSeccion(s)), styles: { halign: "right" } }, ""]);
-        pie.push(["", s.conceptos.some((c) => c.deduccion) ? "Total a cargo de la bolsa general" : "Total", { content: formatCOP(totalSeccion(s)), styles: { halign: "right" } }, ""]);
+        if (s.conceptos.some((c) => c.deduccion)) pie.push(["", "Total compromisos", "", "", { content: formatCOP(brutoSeccion(s)), styles: { halign: "right" } }, ""]);
+        pie.push(["", s.conceptos.some((c) => c.deduccion) ? "Total a cargo de la bolsa general" : "Total", "", "", { content: formatCOP(totalSeccion(s)), styles: { halign: "right" } }, ""]);
         autoTable(doc, {
             ...base,
             startY: y,
-            head: [["N.º", "Concepto", "Valor", "Estado / observación"]],
+            head: [["N.º", "Concepto", "Cant.", "V. unitario", "Total", "Estado / observación"]],
             body: filas,
             foot: pie,
-            columnStyles: { 0: { cellWidth: 10 }, 2: { cellWidth: 30 }, 3: { cellWidth: 50 } },
+            styles: { ...base.styles, fontSize: 8 },
+            columnStyles: { 0: { cellWidth: 9 }, 2: { cellWidth: 14 }, 3: { cellWidth: 24 }, 4: { cellWidth: 26 }, 5: { cellWidth: 44 } },
         });
         y = siguiente(10);
     }

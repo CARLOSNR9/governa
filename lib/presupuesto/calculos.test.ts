@@ -1,7 +1,7 @@
 // Pruebas del consolidado. Ejecutar con: npm run test:presupuesto
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { calcularDescuento, calcularResumen, totalSeccion, brutoSeccion, valorConcepto, totalFilas } from "./calculos";
+import { calcularDescuento, calcularResumen, totalSeccion, brutoSeccion, valorConcepto, totalFilas, totalItem, normalizarPresupuesto } from "./calculos";
 import { presupuestoInicial } from "./datos-iniciales";
 import { formatCOP, parseEntero } from "./tipos";
 import { esquemaPresupuesto } from "./validacion";
@@ -71,14 +71,14 @@ test("quitar Talento de Barrio libera 30.000.000", () => {
 test("sonido del 28 de diciembre de 400.000 a 500.000 suma 100.000", () => {
     const p = presupuestoInicial();
     const antes = calcularResumen(p).totalGastos;
-    con(p, "Actividad del 28").detalles!.find((d) => d.nombre === "Sonido")!.valor = 500_000;
+    con(p, "Actividad del 28").detalles!.find((d) => d.nombre === "Sonido")!.valorUnitario = 500_000;
     assert.equal(valorConcepto(con(p, "Actividad del 28")), 4_750_000);
     assert.equal(calcularResumen(p).totalGastos - antes, 100_000);
 });
 
 test("regalos: 1.700 niños × 20.000 = 34.000.000", () => {
     const p = presupuestoInicial();
-    con(p, "Compra de regalos").calculo!.cantidad = 1_700;
+    con(p, "Compra de regalos").cantidad = 1_700;
     assert.equal(valorConcepto(con(p, "Compra de regalos")), 34_000_000);
 });
 
@@ -125,4 +125,57 @@ test("observaciones en las líneas del desglose (y documentos guardados sin ella
     delete linea.nota; // formato anterior, sin el campo
     assert.ok(esquemaPresupuesto.safeParse(p).success);
     assert.equal(valorConcepto(con(p, "Concurso de afiche")), 2_500_000);
+});
+
+test("cantidad × valor unitario: refrigerios para bandas 100 × 4.000 = 400.000", () => {
+    const p = presupuestoInicial();
+    const act = con(p, "Actividad del 7");
+    const ref = act.detalles!.find((d) => d.nombre === "Refrigerios para bandas")!;
+    assert.equal(ref.cantidad, 1);
+    assert.equal(ref.valorUnitario, 180_000);
+    ref.cantidad = 100;
+    ref.valorUnitario = 4_000;
+    assert.equal(totalItem(ref), 400_000);
+    assert.equal(valorConcepto(act), 550_000);
+    // Gasto simple con cantidad: 3 × 2.000.000 = 6.000.000
+    const desplazados = con(p, "Alimentación para personas desplazadas");
+    desplazados.cantidad = 3;
+    desplazados.valorUnitario = 2_000_000;
+    assert.equal(valorConcepto(desplazados), 6_000_000);
+    // Valor unitario por definir: no suma.
+    ref.valorUnitario = null;
+    assert.equal(valorConcepto(act), 150_000);
+});
+
+test("documento guardado con el formato anterior: mismos totales al normalizar", () => {
+    // Formato anterior: sin cantidad/valorUnitario y regalos con "calculo".
+    const viejo = JSON.parse(JSON.stringify(presupuestoInicial()));
+    for (const s of viejo.secciones)
+        for (const c of s.conceptos) {
+            delete c.cantidad;
+            delete c.valorUnitario;
+            if (c.nombre.startsWith("Compra de regalos")) {
+                c.valor = null;
+                c.calculo = { cantidad: 1_550, valorUnitario: 20_000, etiquetaCantidad: "niños", etiquetaUnitario: "por regalo" };
+            }
+            for (const d of c.detalles ?? []) {
+                delete d.cantidad;
+                delete d.valorUnitario;
+                delete d.nota;
+            }
+        }
+    assert.ok(esquemaPresupuesto.safeParse(viejo).success);
+    assert.equal(calcularResumen(viejo).totalGastos, 186_485_000);
+    const nuevo = normalizarPresupuesto(viejo);
+    assert.equal(calcularResumen(nuevo).totalGastos, 186_485_000);
+    assert.ok(esquemaPresupuesto.safeParse(nuevo).success);
+    const regalos = con(nuevo, "Compra de regalos");
+    assert.equal(regalos.calculo, undefined);
+    assert.equal(regalos.cantidad, 1_550);
+    assert.equal(regalos.valorUnitario, 20_000);
+    const sonido = con(nuevo, "Actividad del 28").detalles!.find((d) => d.nombre === "Sonido")!;
+    assert.equal(sonido.cantidad, 1);
+    assert.equal(sonido.valorUnitario, 400_000);
+    // Normalizar dos veces no cambia nada.
+    assert.deepEqual(normalizarPresupuesto(nuevo), nuevo);
 });

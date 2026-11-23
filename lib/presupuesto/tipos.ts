@@ -5,11 +5,23 @@ export const TITULO = "Consolidado general de gastos – Cierre 2026";
 export const ENTIDAD = "Alcaldía Municipal de Linares, Nariño";
 export const AVISO = "Documento de trabajo para la toma de decisiones. No constituye certificado de disponibilidad presupuestal ni autorización de gasto.";
 export const VALOR_MAXIMO = 2_000_000_000;
+export const CANTIDAD_MAXIMA = 1_000_000;
 
 /** Línea de desglose de un concepto (p. ej. "Sonido" dentro de la Actividad del 28 de diciembre). */
-export interface Detalle {
+/**
+ * Ítems con cantidad y valor unitario: el total es cantidad × valor unitario.
+ * Los documentos guardados antes no traen estos campos; normalizarPresupuesto()
+ * los completa (cantidad 1 y valor unitario = valor total).
+ */
+export interface ConCantidad {
+    cantidad?: number;
+    valorUnitario?: number | null;
+}
+
+export interface Detalle extends ConCantidad {
     id: string;
     nombre: string;
+    /** Total de la línea (se mantiene igual a cantidad × valor unitario). */
     valor: number | null;
     incluido: boolean;
     /** Observación de la línea (opcional: los documentos guardados antes no la tienen). */
@@ -17,17 +29,17 @@ export interface Detalle {
 }
 
 /** Concepto de gasto dentro de una sección de la bolsa general. */
-export interface Concepto {
+export interface Concepto extends ConCantidad {
     id: string;
     nombre: string;
     incluido: boolean;
-    /** Valor directo (se ignora si el concepto tiene desglose o cálculo). null = por definir. */
+    /** Total del concepto (se ignora si tiene desglose). null = por definir. */
     valor: number | null;
     /** Texto libre: estado, fecha u observación. */
     nota: string;
     /** Si tiene desglose, el valor del concepto es la suma de las líneas incluidas. */
     detalles?: Detalle[];
-    /** Concepto calculado: cantidad × valor unitario (p. ej. regalos de Navidad por niño). */
+    /** Formato anterior de los regalos (cantidad × valor). normalizarPresupuesto() lo convierte en cantidad/valorUnitario. */
     calculo?: { cantidad: number; valorUnitario: number; etiquetaCantidad: string; etiquetaUnitario: string };
     /** Resta en lugar de sumar (p. ej. la parte cubierta con un CDP existente). */
     deduccion?: boolean;
@@ -77,6 +89,12 @@ export function formatCOP(valor: number | null | undefined): string {
     if (valor === null || valor === undefined || Number.isNaN(valor)) return "Por definir";
     const abs = Math.abs(Math.trunc(valor)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
     return `${valor < 0 ? "-" : ""}$${abs}`;
+}
+
+/** Número entero con separador de miles, sin signo de pesos: 1.550 */
+export function formatEntero(valor: number | null | undefined): string {
+    if (valor === null || valor === undefined) return "";
+    return Math.trunc(valor).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
 export function parseEntero(texto: string): number | null {

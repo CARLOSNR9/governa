@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatCOP, parseEntero } from "@/lib/presupuesto/tipos";
+import { formatCOP, formatEntero, parseEntero } from "@/lib/presupuesto/tipos";
 
 const conPuntos = (n: number | null) => (n === null ? "" : n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."));
 
@@ -19,6 +19,7 @@ export function CeldaValor({
     negativo = false,
     vacioComo = "Por definir",
     etiqueta,
+    sinMoneda = false,
 }: {
     valor: number | null;
     onCambio: (v: number | null) => void;
@@ -27,6 +28,8 @@ export function CeldaValor({
     negativo?: boolean;
     vacioComo?: string;
     etiqueta: string;
+    /** Muestra el número sin signo de pesos (p. ej. cantidades). */
+    sinMoneda?: boolean;
 }) {
     const [editando, setEditando] = useState(false);
     const [texto, setTexto] = useState("");
@@ -55,7 +58,7 @@ export function CeldaValor({
         );
     }
 
-    const mostrado = valor === null ? vacioComo : `${negativo ? "-" : ""}${formatCOP(valor)}`;
+    const mostrado = valor === null ? vacioComo : `${negativo ? "-" : ""}${sinMoneda ? formatEntero(valor) : formatCOP(valor)}`;
     if (!editable) return <span className={cn("block text-right tabular-nums", valor === null && "italic text-slate-400", className)}>{mostrado}</span>;
     return (
         <button
