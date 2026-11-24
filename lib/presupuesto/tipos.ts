@@ -26,6 +26,8 @@ export interface Detalle extends ConCantidad {
     incluido: boolean;
     /** Observación de la línea (opcional: los documentos guardados antes no la tienen). */
     nota?: string;
+    /** Notica: nota larga del ítem, visible al pasar el puntero sobre el ícono. */
+    notaDetallada?: string;
 }
 
 /** Concepto de gasto dentro de una sección de la bolsa general. */
@@ -37,6 +39,8 @@ export interface Concepto extends ConCantidad {
     valor: number | null;
     /** Texto libre: estado, fecha u observación. */
     nota: string;
+    /** Notica: nota larga del ítem, visible al pasar el puntero sobre el ícono. */
+    notaDetallada?: string;
     /** Si tiene desglose, el valor del concepto es la suma de las líneas incluidas. */
     detalles?: Detalle[];
     /** Formato anterior de los regalos (cantidad × valor). normalizarPresupuesto() lo convierte en cantidad/valorUnitario. */
@@ -49,6 +53,8 @@ export interface Seccion {
     id: string;
     titulo: string;
     nota: string;
+    /** Nota general al final de la sección (p. ej. "esto se paga con el CDP…"). */
+    notaGeneral?: string;
     conceptos: Concepto[];
 }
 
@@ -58,6 +64,7 @@ export interface FilaInfo {
     nombre: string;
     valor: number | null;
     nota: string;
+    notaDetallada?: string;
 }
 
 export interface Presupuesto {
@@ -69,6 +76,8 @@ export interface Presupuesto {
     victimas: { recursos: number; mesa: number; nota: string };
     porConfirmar: FilaInfo[];
     retirados: FilaInfo[];
+    /** Nota general de todo el presupuesto, al final de la hoja. */
+    notaGeneral?: string;
 }
 
 export interface PresupuestoGuardado {
