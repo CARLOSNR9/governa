@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { normalizarTipo, resumirProyecto, type TipoProyecto } from "@/lib/gastos/proyectos";
 
 export async function getProyectos() {
     try {
@@ -14,25 +15,12 @@ export async function getProyectos() {
             },
         });
 
-        const proyectosConSaldos = proyectos.map(p => {
-            const gastos = p.transacciones
-                .filter(t => t.tipo === "EGRESO")
-                .reduce((sum, t) => sum + t.monto, 0);
-            
-            const ingresos = p.transacciones
-                .filter(t => t.tipo === "INGRESO")
-                .reduce((sum, t) => sum + t.monto, 0);
-
-            // El saldo es el presupuesto inicial + ingresos (si aplica) - gastos
-            const saldo = p.presupuesto + ingresos - gastos;
-
-            return {
-                ...p,
-                gastos,
-                ingresos,
-                saldo,
-            };
-        });
+        // gastos, ingresos, saldo (presupuesto + ingresos - gastos), pagado,
+        // pendiente (falta por pagar) y estado de pago de cada proyecto.
+        const proyectosConSaldos = proyectos.map(p => ({
+            ...p,
+            ...resumirProyecto(p.presupuesto, p.tipo, p.transacciones),
+        }));
 
         return { success: true, data: proyectosConSaldos };
     } catch (error) {
@@ -45,13 +33,17 @@ export async function createProyecto(data: {
     nombre: string;
     descripcion?: string;
     presupuesto: number;
+    tipo?: TipoProyecto;
 }) {
     try {
+        const tipo = normalizarTipo(data.tipo, data.presupuesto);
         const nuevoProyecto = await prisma.proyecto.create({
             data: {
                 nombre: data.nombre,
                 descripcion: data.descripcion || null,
-                presupuesto: data.presupuesto,
+                // Un proyecto de gasto acumulado no tiene valor inicial.
+                presupuesto: tipo === "ACUMULADO" ? 0 : Math.max(data.presupuesto || 0, 0),
+                tipo,
             },
         });
 
@@ -89,11 +81,21 @@ export async function updateProyecto(id: string, data: {
     nombre?: string;
     descripcion?: string;
     presupuesto?: number;
+    tipo?: TipoProyecto;
 }) {
     try {
+        const cambios: { nombre?: string; descripcion?: string; presupuesto?: number; tipo?: TipoProyecto } = {
+            nombre: data.nombre,
+            descripcion: data.descripcion,
+            presupuesto: data.presupuesto === undefined ? undefined : Math.max(data.presupuesto || 0, 0),
+        };
+        if (data.tipo !== undefined) {
+            cambios.tipo = normalizarTipo(data.tipo, data.presupuesto ?? 0);
+            if (cambios.tipo === "ACUMULADO") cambios.presupuesto = 0;
+        }
         const proyectoActualizado = await prisma.proyecto.update({
             where: { id },
-            data,
+            data: cambios,
         });
 
         revalidatePath("/gastos");

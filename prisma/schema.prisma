@@ -93,6 +93,9 @@ model Proyecto {
   descripcion String?
   presupuesto Float    @default(0)
   estado      String   @default("ACTIVO")
+  // PRESUPUESTO: tiene un valor asignado o anticipado y se descuentan los gastos.
+  // ACUMULADO: no tiene valor inicial; los gastos se van acumulando como deuda.
+  tipo        String   @default("ACUMULADO")
   transacciones Transaccion[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
