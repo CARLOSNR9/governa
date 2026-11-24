@@ -9,6 +9,8 @@ import { createTransaccion, deleteTransaccion, updateTransaccion, registrarAbono
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { createProyecto, deleteProyecto, updateProyecto } from "@/app/actions/proyectos";
+import { FichaProyecto, SelectorTipoProyecto } from "@/components/modules/gastos/Proyectos";
+import type { TipoProyecto } from "@/lib/gastos/proyectos";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,10 +79,11 @@ export default function GastosClient({
         fecha: format(new Date(), "yyyy-MM-dd"), // Fecha por defecto: hoy
     });
 
-    const [projectData, setProjectData] = useState({
+    const [projectData, setProjectData] = useState<{ nombre: string; presupuesto: string; descripcion: string; tipo: TipoProyecto }>({
         nombre: "",
         presupuesto: "0",
         descripcion: "",
+        tipo: "ACUMULADO",
     });
 
     // Filtros
@@ -105,10 +108,20 @@ export default function GastosClient({
         doc.text(`Reporte de Proyecto: ${selectedProyecto.nombre}`, 14, 22);
         
         doc.setFontSize(12);
-        doc.text(`Presupuesto: $${selectedProyecto.presupuesto.toLocaleString("es-CO")}`, 14, 32);
-        doc.text(`Total Ingresos: $${(selectedProyecto.ingresos || 0).toLocaleString("es-CO")}`, 14, 38);
-        doc.text(`Total Gastos: $${(selectedProyecto.gastos || 0).toLocaleString("es-CO")}`, 14, 44);
-        doc.text(`Saldo: $${(selectedProyecto.saldo || 0).toLocaleString("es-CO")}`, 14, 50);
+        const lineasResumen = selectedProyecto.tipo === "PRESUPUESTO"
+            ? [
+                `Presupuesto: $${selectedProyecto.presupuesto.toLocaleString("es-CO")}`,
+                `Total Gastos: $${(selectedProyecto.gastos || 0).toLocaleString("es-CO")}`,
+                `Saldo: $${(selectedProyecto.saldo || 0).toLocaleString("es-CO")}`,
+                `Falta por pagar: $${(selectedProyecto.pendiente || 0).toLocaleString("es-CO")}`,
+            ]
+            : [
+                `Total acumulado: $${(selectedProyecto.gastos || 0).toLocaleString("es-CO")}`,
+                `Pagado: $${(selectedProyecto.pagado || 0).toLocaleString("es-CO")}`,
+                `Falta por pagar: $${(selectedProyecto.pendiente || 0).toLocaleString("es-CO")}`,
+                `Total Ingresos: $${(selectedProyecto.ingresos || 0).toLocaleString("es-CO")}`,
+            ];
+        lineasResumen.forEach((linea, i) => doc.text(linea, 14, 32 + i * 6));
 
         const tableColumn = ["Fecha", "Concepto", "Categoría", "Tipo", "Monto"];
         const tableRows: any[] = [];
@@ -213,14 +226,15 @@ export default function GastosClient({
         const res = await createProyecto({
             nombre: projectData.nombre,
             descripcion: projectData.descripcion,
-            presupuesto: pres,
+            presupuesto: projectData.tipo === "ACUMULADO" ? 0 : pres,
+            tipo: projectData.tipo,
         });
         setIsSubmitting(false);
 
         if (res.success) {
             toast.success("Proyecto creado correctamente");
             setIsProjectDialogOpen(false);
-            setProjectData({ nombre: "", presupuesto: "0", descripcion: "" });
+            setProjectData({ nombre: "", presupuesto: "0", descripcion: "", tipo: "ACUMULADO" });
         } else {
             toast.error(res.error || "Error al crear proyecto");
         }
@@ -238,7 +252,8 @@ export default function GastosClient({
         const res = await updateProyecto(projectToEdit.id, {
             nombre: projectToEdit.nombre,
             descripcion: projectToEdit.descripcion,
-            presupuesto: pres,
+            presupuesto: projectToEdit.tipo === "ACUMULADO" ? 0 : pres,
+            tipo: projectToEdit.tipo,
         });
         setIsSubmitting(false);
 
@@ -590,10 +605,11 @@ export default function GastosClient({
     // Determinar qué resumen mostrar arriba
     const activeSummary = selectedProyecto 
         ? {
+            // En un proyecto de gasto acumulado no hay saldo: se muestra cuánto falta por pagar.
             totalIngresos: selectedProyecto.ingresos || 0,
             totalEgresos: selectedProyecto.gastos || 0,
-            saldo: selectedProyecto.saldo || 0,
-            tituloSaldo: "Saldo del Proyecto",
+            saldo: selectedProyecto.tipo === "ACUMULADO" ? selectedProyecto.pendiente || 0 : selectedProyecto.saldo || 0,
+            tituloSaldo: selectedProyecto.tipo === "ACUMULADO" ? "Falta por pagar del Proyecto" : "Saldo del Proyecto",
             presupuesto: selectedProyecto.presupuesto
         }
         : {
@@ -696,7 +712,7 @@ export default function GastosClient({
                                         Crear Nuevo Proyecto
                                     </Button>
                                 </DialogTrigger>
-                                <DialogContent>
+                                <DialogContent className="sm:max-w-xl">
                                     <DialogHeader>
                                         <DialogTitle>Nuevo Proyecto</DialogTitle>
                                     </DialogHeader>
@@ -710,14 +726,20 @@ export default function GastosClient({
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <Label>Presupuesto Asignado ($)</Label>
-                                            <Input
-                                                type="number"
-                                                placeholder="0"
-                                                value={projectData.presupuesto}
-                                                onChange={(e) => setProjectData({ ...projectData, presupuesto: e.target.value })}
-                                            />
+                                            <Label>Tipo de proyecto</Label>
+                                            <SelectorTipoProyecto valor={projectData.tipo} onCambio={(tipo) => setProjectData({ ...projectData, tipo })} />
                                         </div>
+                                        {projectData.tipo === "PRESUPUESTO" && (
+                                            <div className="space-y-2">
+                                                <Label>Presupuesto Asignado ($)</Label>
+                                                <Input
+                                                    type="number"
+                                                    placeholder="0"
+                                                    value={projectData.presupuesto}
+                                                    onChange={(e) => setProjectData({ ...projectData, presupuesto: e.target.value })}
+                                                />
+                                            </div>
+                                        )}
                                         <div className="space-y-2">
                                             <Label>Descripción (Opcional)</Label>
                                             <Input
@@ -745,46 +767,9 @@ export default function GastosClient({
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {proyectos.map(p => {
-                                    const porcentaje = p.presupuesto > 0 ? (p.gastos / p.presupuesto) * 100 : 0;
-                                    return (
-                                        <Card key={p.id} className="cursor-pointer hover:border-indigo-300 transition-colors" onClick={() => setSelectedProjectId(p.id)}>
-                                            <CardHeader className="pb-2">
-                                                <CardTitle className="text-lg flex justify-between items-start">
-                                                    {p.nombre}
-                                                    <Badge variant={p.saldo >= 0 ? "default" : "destructive"} className={p.saldo >= 0 ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100" : ""}>
-                                                        {p.estado}
-                                                    </Badge>
-                                                </CardTitle>
-                                                <CardDescription>{p.descripcion || "Sin descripción"}</CardDescription>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <div className="space-y-2 mt-2">
-                                                    <div className="flex justify-between text-sm">
-                                                        <span className="text-slate-500">Presupuesto</span>
-                                                        <span className="font-medium">${p.presupuesto.toLocaleString("es-CO")}</span>
-                                                    </div>
-                                                    <div className="flex justify-between text-sm">
-                                                        <span className="text-slate-500">Gastado</span>
-                                                        <span className="font-medium text-rose-600">${p.gastos.toLocaleString("es-CO")}</span>
-                                                    </div>
-                                                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                                                        <div 
-                                                            className={`h-full ${porcentaje > 90 ? 'bg-rose-500' : 'bg-indigo-500'}`} 
-                                                            style={{ width: `${Math.min(porcentaje, 100)}%` }}
-                                                        />
-                                                    </div>
-                                                    <div className="flex justify-between font-semibold mt-2 pt-2 border-t">
-                                                        <span>Saldo</span>
-                                                        <span className={p.saldo < 0 ? "text-rose-600" : "text-emerald-600"}>
-                                                            ${p.saldo.toLocaleString("es-CO")}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    );
-                                })}
+                                {proyectos.map(p => (
+                                    <FichaProyecto key={p.id} p={p} onClick={() => setSelectedProjectId(p.id)} />
+                                ))}
                             </div>
                         )}
                     </div>
@@ -1067,7 +1052,7 @@ export default function GastosClient({
 
             {/* Modal para Editar Proyecto */}
             <Dialog open={isEditProjectDialogOpen} onOpenChange={setIsEditProjectDialogOpen}>
-                <DialogContent>
+                <DialogContent className="sm:max-w-xl">
                     <DialogHeader>
                         <DialogTitle>Editar Proyecto</DialogTitle>
                     </DialogHeader>
@@ -1082,14 +1067,20 @@ export default function GastosClient({
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label>Presupuesto Asignado ($)</Label>
-                                <Input
-                                    type="number"
-                                    placeholder="0"
-                                    value={projectToEdit.presupuesto}
-                                    onChange={(e) => setProjectToEdit({ ...projectToEdit, presupuesto: e.target.value })}
-                                />
+                                <Label>Tipo de proyecto</Label>
+                                <SelectorTipoProyecto valor={projectToEdit.tipo ?? "ACUMULADO"} onCambio={(tipo) => setProjectToEdit({ ...projectToEdit, tipo })} />
                             </div>
+                            {projectToEdit.tipo === "PRESUPUESTO" && (
+                                <div className="space-y-2">
+                                    <Label>Presupuesto Asignado ($)</Label>
+                                    <Input
+                                        type="number"
+                                        placeholder="0"
+                                        value={projectToEdit.presupuesto}
+                                        onChange={(e) => setProjectToEdit({ ...projectToEdit, presupuesto: e.target.value })}
+                                    />
+                                </div>
+                            )}
                             <div className="space-y-2">
                                 <Label>Descripción (Opcional)</Label>
                                 <Input
