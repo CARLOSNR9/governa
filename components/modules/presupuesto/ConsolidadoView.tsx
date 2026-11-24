@@ -10,6 +10,7 @@ import { guardarPresupuesto, restablecerPresupuesto } from "@/app/actions/presup
 import { brutoSeccion, calcularResumen, totalFilas, totalItem, totalSeccion, usaCantidad, valorConcepto } from "@/lib/presupuesto/calculos";
 import { CANTIDAD_MAXIMA, ENTIDAD, TITULO, formatCOP, formatPorcentajePb, nuevoId, type ConCantidad, type Concepto, type FilaInfo, type Permisos, type Presupuesto, type PresupuestoGuardado } from "@/lib/presupuesto/tipos";
 import { Casilla, CeldaTexto, CeldaValor } from "./Celdas";
+import { NotaGeneral, NotaItem } from "./Notas";
 import { descargarPDF } from "./pdf";
 
 type EstadoGuardado = "guardado" | "pendiente" | "guardando" | "error" | "conflicto";
@@ -117,7 +118,7 @@ export function ConsolidadoView({ inicial, permisos }: { inicial: PresupuestoGua
                             <th className={TH}>{columnas.nombre}</th>
                             <th className={cn(TH, "w-40 text-right")}>{columnas.valor}</th>
                             <th className={cn(TH, "hidden md:table-cell")}>{columnas.nota}</th>
-                            {editable && <th className={cn(TH, "w-10")} />}
+                            <th className={cn(TH, "w-16")} />
                         </tr>
                     </thead>
                     <tbody>
@@ -136,15 +137,18 @@ export function ConsolidadoView({ inicial, permisos }: { inicial: PresupuestoGua
                                 <td className={cn(TD, "hidden text-slate-600 md:table-cell")}>
                                     <CeldaTexto etiqueta={columnas.nota} valor={f.nota} editable={editable} onCambio={(v) => mutar((d) => void (listaInfo(d, clave)[i].nota = v))} />
                                 </td>
-                                {editable && (
-                                    <td className={cn(TD, "text-center")}>
-                                        <BotonBorrar
-                                            onClick={() =>
-                                                pedirConfirmacion("¿Eliminar esta fila?", `Se eliminará "${f.nombre}".`, () => mutar((d) => void listaInfo(d, clave).splice(i, 1)))
-                                            }
-                                        />
-                                    </td>
-                                )}
+                                <td className={cn(TD, "text-center")}>
+                                    <div className="flex items-center justify-center gap-0.5">
+                                        <NotaItem titulo={f.nombre} nota={f.notaDetallada ?? ""} editable={editable} onGuardar={(t) => mutar((d) => void (listaInfo(d, clave)[i].notaDetallada = t))} />
+                                        {editable && (
+                                            <BotonBorrar
+                                                onClick={() =>
+                                                    pedirConfirmacion("¿Eliminar esta fila?", `Se eliminará "${f.nombre}".`, () => mutar((d) => void listaInfo(d, clave).splice(i, 1)))
+                                                }
+                                            />
+                                        )}
+                                    </div>
+                                </td>
                             </tr>
                         ))}
                     </tbody>
@@ -155,7 +159,7 @@ export function ConsolidadoView({ inicial, permisos }: { inicial: PresupuestoGua
                                 <td className={TD}>{total}</td>
                                 <td className={cn(TD, "px-4 text-right tabular-nums")}>{formatCOP(totalFilas(filas))}</td>
                                 <td className={cn(TD, "hidden md:table-cell")} />
-                                {editable && <td className={TD} />}
+                                <td className={TD} />
                             </tr>
                         </tfoot>
                     )}
@@ -301,7 +305,7 @@ export function ConsolidadoView({ inicial, permisos }: { inicial: PresupuestoGua
                                         <th className={cn(TH, "w-32 text-right")}>Valor unitario</th>
                                         <th className={cn(TH, "w-36 text-right")}>Total</th>
                                         <th className={cn(TH, "w-56")}>Estado / observación</th>
-                                        {editable && <th className={cn(TH, "w-10")} />}
+                                        <th className={cn(TH, "w-16")} title="Nota y eliminar" />
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -377,20 +381,28 @@ export function ConsolidadoView({ inicial, permisos }: { inicial: PresupuestoGua
                                                     <td className={cn(TD, "font-normal text-slate-600")}>
                                                         <CeldaTexto etiqueta="Estado u observación" valor={c.nota} editable={editable} className="text-sm" onCambio={(t) => cambiarConcepto(s.id, c.id, (x) => void (x.nota = t))} />
                                                     </td>
-                                                    {editable && (
-                                                        <td className={cn(TD, "text-center")}>
-                                                            <BotonBorrar
-                                                                onClick={() =>
-                                                                    pedirConfirmacion("¿Eliminar este gasto?", `Se eliminará "${c.nombre}" del consolidado. Si solo quiere quitarlo de la suma, desmarque la casilla.`, () =>
-                                                                        mutar((d) => {
-                                                                            const sec = d.secciones.find((x) => x.id === s.id)!;
-                                                                            sec.conceptos = sec.conceptos.filter((x) => x.id !== c.id);
-                                                                        })
-                                                                    )
-                                                                }
+                                                    <td className={cn(TD, "text-center font-normal not-italic")}>
+                                                        <div className="flex items-center justify-center gap-0.5">
+                                                            <NotaItem
+                                                                titulo={c.nombre}
+                                                                nota={c.notaDetallada ?? ""}
+                                                                editable={editable}
+                                                                onGuardar={(t) => cambiarConcepto(s.id, c.id, (x) => void (x.notaDetallada = t))}
                                                             />
-                                                        </td>
-                                                    )}
+                                                            {editable && (
+                                                                <BotonBorrar
+                                                                    onClick={() =>
+                                                                        pedirConfirmacion("¿Eliminar este gasto?", `Se eliminará "${c.nombre}" del consolidado. Si solo quiere quitarlo de la suma, desmarque la casilla.`, () =>
+                                                                            mutar((d) => {
+                                                                                const sec = d.secciones.find((x) => x.id === s.id)!;
+                                                                                sec.conceptos = sec.conceptos.filter((x) => x.id !== c.id);
+                                                                            })
+                                                                        )
+                                                                    }
+                                                                />
+                                                            )}
+                                                        </div>
+                                                    </td>
                                                 </tr>
 
                                                 {abierto &&
@@ -446,17 +458,25 @@ export function ConsolidadoView({ inicial, permisos }: { inicial: PresupuestoGua
                                                                     onCambio={(t) => cambiarConcepto(s.id, c.id, (y) => void (y.detalles!.find((z) => z.id === dt.id)!.nota = t))}
                                                                 />
                                                             </td>
-                                                            {editable && (
-                                                                <td className={cn(TD, "text-center")}>
-                                                                    <BotonBorrar
-                                                                        onClick={() =>
-                                                                            cambiarConcepto(s.id, c.id, (x) => {
-                                                                                x.detalles = x.detalles!.filter((y) => y.id !== dt.id);
-                                                                            })
-                                                                        }
+                                                            <td className={cn(TD, "text-center")}>
+                                                                <div className="flex items-center justify-center gap-0.5">
+                                                                    <NotaItem
+                                                                        titulo={`${dt.nombre} (${c.nombre})`}
+                                                                        nota={dt.notaDetallada ?? ""}
+                                                                        editable={editable}
+                                                                        onGuardar={(t) => cambiarConcepto(s.id, c.id, (y) => void (y.detalles!.find((z) => z.id === dt.id)!.notaDetallada = t))}
                                                                     />
-                                                                </td>
-                                                            )}
+                                                                    {editable && (
+                                                                        <BotonBorrar
+                                                                            onClick={() =>
+                                                                                cambiarConcepto(s.id, c.id, (x) => {
+                                                                                    x.detalles = x.detalles!.filter((y) => y.id !== dt.id);
+                                                                                })
+                                                                            }
+                                                                        />
+                                                                    )}
+                                                                </div>
+                                                            </td>
                                                         </tr>
                                                     ))}
                                                 {abierto && editable && (
@@ -485,7 +505,7 @@ export function ConsolidadoView({ inicial, permisos }: { inicial: PresupuestoGua
                                                 Total compromisos
                                             </td>
                                             <td className={cn(TD, "px-4 text-right tabular-nums")}>{formatCOP(brutoSeccion(s))}</td>
-                                            <td className={TD} colSpan={editable ? 2 : 1} />
+                                            <td className={TD} colSpan={2} />
                                         </tr>
                                     )}
                                     <tr className="bg-indigo-50 font-bold">
@@ -493,7 +513,7 @@ export function ConsolidadoView({ inicial, permisos }: { inicial: PresupuestoGua
                                             {tieneDeduccion ? "Total a cargo de la bolsa general" : "Total"}
                                         </td>
                                         <td className={cn(TD, "px-4 text-right tabular-nums")}>{formatCOP(totalSeccion(s))}</td>
-                                        <td className={TD} colSpan={editable ? 2 : 1} />
+                                        <td className={TD} colSpan={2} />
                                     </tr>
                                 </tfoot>
                             </table>
@@ -514,6 +534,12 @@ export function ConsolidadoView({ inicial, permisos }: { inicial: PresupuestoGua
                                 Agregar gasto
                             </BotonAgregar>
                         )}
+                        <NotaGeneral
+                            titulo={`Nota general de ${s.titulo.split(/\s+[–-]\s+/)[0]}`}
+                            nota={s.notaGeneral ?? ""}
+                            editable={editable}
+                            onGuardar={(t) => mutar((d) => void (d.secciones.find((x) => x.id === s.id)!.notaGeneral = t))}
+                        />
                     </section>
                 );
             })}
@@ -588,6 +614,17 @@ export function ConsolidadoView({ inicial, permisos }: { inicial: PresupuestoGua
             <h2 className={TITULO_SECCION}>{numero++}. Conceptos retirados o aplazados</h2>
             <p className="mb-2 text-sm text-slate-600">Se mencionaron, pero no son pendientes activos de la bolsa general.</p>
             {tablaInfo("retirados", { nombre: "Concepto", valor: "Valor", nota: "Situación" })}
+
+            {/* Nota general de todo el presupuesto */}
+            <h2 className={TITULO_SECCION}>{numero++}. Nota general del presupuesto</h2>
+            <NotaGeneral
+                destacada
+                titulo="Nota general (todo el presupuesto 2026)"
+                nota={doc.notaGeneral ?? ""}
+                editable={editable}
+                onGuardar={(t) => mutar((d) => void (d.notaGeneral = t))}
+            />
+            {!editable && !doc.notaGeneral && <p className="text-sm text-slate-400">Sin nota general.</p>}
 
             <p className="mt-8 border-t border-slate-200 pt-3 text-center text-xs text-slate-500">
                 Documento de trabajo para la toma de decisiones. No constituye certificado de disponibilidad presupuestal ni autorización de gasto.

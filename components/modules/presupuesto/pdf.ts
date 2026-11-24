@@ -46,6 +46,36 @@ export function descargarPDF(p: Presupuesto, usuario: string) {
         y += 1;
     };
 
+    /** Fila de "notica" debajo de un ítem, ocupando el ancho de la tabla. */
+    const filaNota = (texto: string, columnas: number, sangria = ""): RowInput => [
+        "",
+        { content: `${sangria}Nota: ${texto}`, colSpan: columnas - 1, styles: { fontStyle: "italic", fontSize: 7.5, textColor: [146, 64, 14], fillColor: [255, 251, 235] } },
+    ];
+    /** Bloque de nota general (sección o todo el presupuesto). */
+    const bloqueNota = (tituloNota: string, texto: string | undefined) => {
+        if (!texto?.trim()) return;
+        const lineas = doc.splitTextToSize(texto.trim(), ancho - 36);
+        const alto = lineas.length * 3.8 + 10;
+        if (y + alto > doc.internal.pageSize.getHeight() - 20) {
+            doc.addPage();
+            y = 18;
+        }
+        doc.setFillColor(255, 251, 235);
+        doc.setDrawColor(245, 158, 11);
+        doc.rect(14, y, ancho - 28, alto, "F");
+        doc.setLineWidth(0.8);
+        doc.line(14, y, 14, y + alto);
+        doc.setLineWidth(0.2);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8.5);
+        doc.setTextColor(120, 53, 15);
+        doc.text(tituloNota, 18, y + 5);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(15, 23, 42);
+        doc.text(lineas, 18, y + 9.5);
+        y += alto + 8;
+    };
+
     // Encabezado
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
@@ -94,6 +124,7 @@ export function descargarPDF(p: Presupuesto, usuario: string) {
                 { content: v === null ? "Por definir" : `${c.deduccion ? "-" : ""}${formatCOP(v)}`, styles: { halign: "right", ...estiloFila } },
                 { content: fuera ? `NO INCLUIDO${c.nota ? ` · ${c.nota}` : ""}` : c.nota, styles: estiloFila },
             ]);
+            if (c.notaDetallada?.trim()) filas.push(filaNota(c.notaDetallada.trim(), 6));
             if (c.detalles?.length && c.incluido) {
                 for (const d of c.detalles) {
                     const e = d.incluido ? { textColor: [71, 85, 105] as [number, number, number] } : { textColor: GRIS, fontStyle: "italic" as const };
@@ -105,6 +136,7 @@ export function descargarPDF(p: Presupuesto, usuario: string) {
                         { content: formatCOP(totalItem(d)), styles: { halign: "right", ...e } },
                         { content: d.incluido ? d.nota ?? "" : `No incluido${d.nota ? ` · ${d.nota}` : ""}`, styles: e },
                     ]);
+                    if (d.notaDetallada?.trim()) filas.push(filaNota(d.notaDetallada.trim(), 6, "    "));
                 }
             }
         }
@@ -120,7 +152,9 @@ export function descargarPDF(p: Presupuesto, usuario: string) {
             styles: { ...base.styles, fontSize: 8 },
             columnStyles: { 0: { cellWidth: 9 }, 2: { cellWidth: 14 }, 3: { cellWidth: 24 }, 4: { cellWidth: 26 }, 5: { cellWidth: 44 } },
         });
-        y = siguiente(10);
+        y = siguiente(8);
+        bloqueNota(`Nota general de ${s.titulo.split(/\s+[–-]\s+/)[0]}`, s.notaGeneral);
+        y += 2;
     }
 
     titulo(`${num++}. Resumen general`);
@@ -144,7 +178,10 @@ export function descargarPDF(p: Presupuesto, usuario: string) {
             ...base,
             startY: y,
             head: [["N.º", "Concepto", "Valor", col]],
-            body: filas.map((f, i) => [String(i + 1), f.nombre, { content: formatCOP(f.valor), styles: { halign: "right" } }, f.nota]),
+            body: filas.flatMap((f, i): RowInput[] => [
+                [String(i + 1), f.nombre, { content: formatCOP(f.valor), styles: { halign: "right" } }, f.nota],
+                ...(f.notaDetallada?.trim() ? [filaNota(f.notaDetallada.trim(), 4)] : []),
+            ]),
             foot: totalTxt ? [["", totalTxt, { content: formatCOP(totalFilas(filas)), styles: { halign: "right" } }, ""]] : undefined,
             columnStyles: { 0: { cellWidth: 10, halign: "center" }, 2: { cellWidth: 30 }, 3: { cellWidth: 60 } },
         });
@@ -168,6 +205,12 @@ export function descargarPDF(p: Presupuesto, usuario: string) {
     y = siguiente(10);
     if (p.porConfirmar.length) info("Por confirmar (no se suman a la bolsa)", "", p.porConfirmar, "Observación");
     info(`${num++}. Conceptos retirados o aplazados`, "Se mencionaron, pero no son pendientes activos de la bolsa general.", p.retirados, "Situación");
+
+    if (p.notaGeneral?.trim()) {
+        titulo(`${num++}. Nota general del presupuesto`);
+        y += 2;
+        bloqueNota("Nota general (todo el presupuesto 2026)", p.notaGeneral);
+    }
 
     // Pie de página
     const total = doc.getNumberOfPages();

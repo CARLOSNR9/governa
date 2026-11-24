@@ -179,3 +179,19 @@ test("documento guardado con el formato anterior: mismos totales al normalizar",
     // Normalizar dos veces no cambia nada.
     assert.deepEqual(normalizarPresupuesto(nuevo), nuevo);
 });
+
+test("noticas por ítem, notas generales de sección y del presupuesto", () => {
+    const p = presupuestoInicial();
+    const antes = calcularResumen(p).totalGastos;
+    con(p, "Árbitros").notaDetallada = "Son 6 árbitros por fecha, 10 fechas.";
+    con(p, "Actividad del 28").detalles![1].notaDetallada = "Sonido contratado con proveedor local.";
+    p.cdp[0].notaDetallada = "CDP expedido en octubre.";
+    sec(p, "deportes").notaGeneral = "Del CDP del Interveredal se cubren premiación, árbitros y uniformes.";
+    p.notaGeneral = "Revisar con el alcalde antes del 15 de diciembre.";
+    assert.ok(esquemaPresupuesto.safeParse(p).success);
+    // Las notas no cambian ningún valor.
+    assert.equal(calcularResumen(p).totalGastos, antes);
+    // Límite de longitud.
+    p.notaGeneral = "x".repeat(3001);
+    assert.equal(esquemaPresupuesto.safeParse(p).success, false);
+});
