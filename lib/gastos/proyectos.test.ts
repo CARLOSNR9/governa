@@ -57,3 +57,11 @@ test("tipo de proyectos existentes: según el presupuesto", () => {
     assert.equal(normalizarTipo(undefined, 0), "ACUMULADO");
     assert.equal(normalizarTipo("ACUMULADO", 500), "ACUMULADO");
 });
+
+test("texto en mayúsculas, con tildes y ñ", async () => {
+    const { aMayusculas } = await import("./texto");
+    assert.equal(aMayusculas("compra de jabones"), "COMPRA DE JABONES");
+    assert.equal(aMayusculas("tienda ortega"), "TIENDA ORTEGA");
+    assert.equal(aMayusculas("niños de la vereda – atención"), "NIÑOS DE LA VEREDA – ATENCIÓN");
+    assert.equal(aMayusculas(""), "");
+});
