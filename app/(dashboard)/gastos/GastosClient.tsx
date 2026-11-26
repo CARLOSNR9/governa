@@ -123,7 +123,7 @@ export default function GastosClient({
             ];
         lineasResumen.forEach((linea, i) => doc.text(linea, 14, 32 + i * 6));
 
-        const tableColumn = ["Fecha", "Concepto", "Categoría", "Tipo", "Monto"];
+        const tableColumn = ["Fecha", "Concepto", "Proveedor / lugar", "Tipo", "Monto"];
         const tableRows: any[] = [];
 
         filteredData.forEach(t => {
@@ -151,6 +151,10 @@ export default function GastosClient({
     const handleUpdateTransaccion = async () => {
         if (!formData.concepto || !formData.monto || !transaccionToEdit) {
             toast.error("Por favor completa los campos requeridos");
+            return;
+        }
+        if (!formData.categoria.trim()) {
+            toast.error(formData.tipo === "INGRESO" ? "Indica el origen del ingreso" : "Indica el proveedor o lugar de compra");
             return;
         }
 
@@ -191,6 +195,10 @@ export default function GastosClient({
     const handleCreateTransaccion = async () => {
         if (!formData.concepto || !formData.monto) {
             toast.error("Por favor completa los campos requeridos");
+            return;
+        }
+        if (!formData.categoria.trim()) {
+            toast.error(formData.tipo === "INGRESO" ? "Indica el origen del ingreso" : "Indica el proveedor o lugar de compra");
             return;
         }
 
@@ -413,7 +421,7 @@ export default function GastosClient({
                         <TableRow className="bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-50 dark:hover:bg-slate-900/50">
                             <TableHead>Fecha</TableHead>
                             <TableHead>Concepto</TableHead>
-                            <TableHead>Categoría</TableHead>
+                            <TableHead>Proveedor / lugar</TableHead>
                             <TableHead>Tipo</TableHead>
                             <TableHead>Estado de Pago</TableHead>
                             <TableHead className="text-right">Monto</TableHead>
@@ -620,8 +628,16 @@ export default function GastosClient({
             presupuesto: null
         };
 
+    // Proveedores o lugares ya registrados, para sugerirlos al escribir.
+    const proveedores = Array.from(new Set(initialData.map((t) => (t.categoria || "").trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, "es"));
+
     return (
         <div className="space-y-6">
+            <datalist id="proveedores-gastos">
+                {proveedores.map((nombre) => (
+                    <option key={nombre} value={nombre} />
+                ))}
+            </datalist>
             {/* Dynamic Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
@@ -679,7 +695,7 @@ export default function GastosClient({
                             <div className="relative w-full md:w-96">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                                 <Input
-                                    placeholder="Buscar por concepto o categoría..."
+                                    placeholder="Buscar por concepto o proveedor..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     className="pl-10"
@@ -889,9 +905,13 @@ export default function GastosClient({
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label>Categoría (Opcional)</Label>
+                            <Label>
+                                {formData.tipo === "INGRESO" ? "Origen del ingreso" : "Proveedor o lugar de compra"} <span className="text-rose-600">*</span>
+                            </Label>
                             <Input
-                                placeholder="Ej: Suministros"
+                                required
+                                list="proveedores-gastos"
+                                placeholder={formData.tipo === "INGRESO" ? "Ej: Tesorería municipal" : "Ej: Tienda Ortega"}
                                 value={formData.categoria}
                                 onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
                             />
@@ -980,9 +1000,13 @@ export default function GastosClient({
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label>Categoría (Opcional)</Label>
+                            <Label>
+                                {formData.tipo === "INGRESO" ? "Origen del ingreso" : "Proveedor o lugar de compra"} <span className="text-rose-600">*</span>
+                            </Label>
                             <Input
-                                placeholder="Ej: Suministros"
+                                required
+                                list="proveedores-gastos"
+                                placeholder={formData.tipo === "INGRESO" ? "Ej: Tesorería municipal" : "Ej: Tienda Ortega"}
                                 value={formData.categoria}
                                 onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
                             />

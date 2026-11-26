@@ -48,12 +48,15 @@ export async function createTransaccion(data: {
     proyectoId?: string;
 }) {
     try {
+        if (!data.categoria?.trim()) {
+            return { success: false, error: "Indica el proveedor o lugar de compra" };
+        }
         const nuevaTransaccion = await prisma.transaccion.create({
             data: {
                 concepto: data.concepto,
                 monto: data.monto,
                 tipo: data.tipo,
-                categoria: data.categoria || null,
+                categoria: data.categoria.trim(),
                 fecha: data.fecha || new Date(),
                 proyectoId: data.proyectoId || null,
             },
@@ -90,6 +93,9 @@ export async function updateTransaccion(id: string, data: {
     proyectoId?: string;
 }) {
     try {
+        if (!data.categoria?.trim()) {
+            return { success: false, error: "Indica el proveedor o lugar de compra" };
+        }
         // Si el monto de la deuda se reduce, el abono no puede quedar por encima del nuevo monto
         const actual = await prisma.transaccion.findUnique({ where: { id } });
         const montoAbonado = actual ? Math.min(actual.montoAbonado, data.monto) : 0;
@@ -100,7 +106,7 @@ export async function updateTransaccion(id: string, data: {
                 concepto: data.concepto,
                 monto: data.monto,
                 tipo: data.tipo,
-                categoria: data.categoria || null,
+                categoria: data.categoria.trim(),
                 fecha: data.fecha || new Date(),
                 proyectoId: data.proyectoId || null,
                 montoAbonado,
