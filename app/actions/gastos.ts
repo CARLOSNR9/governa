@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { aMayusculas } from "@/lib/gastos/texto";
 
 export async function getTransacciones() {
     try {
@@ -53,10 +54,10 @@ export async function createTransaccion(data: {
         }
         const nuevaTransaccion = await prisma.transaccion.create({
             data: {
-                concepto: data.concepto,
+                concepto: aMayusculas(data.concepto.trim()),
                 monto: data.monto,
                 tipo: data.tipo,
-                categoria: data.categoria.trim(),
+                categoria: aMayusculas(data.categoria.trim()),
                 fecha: data.fecha || new Date(),
                 proyectoId: data.proyectoId || null,
             },
@@ -103,10 +104,10 @@ export async function updateTransaccion(id: string, data: {
         const transaccionActualizada = await prisma.transaccion.update({
             where: { id },
             data: {
-                concepto: data.concepto,
+                concepto: aMayusculas(data.concepto.trim()),
                 monto: data.monto,
                 tipo: data.tipo,
-                categoria: data.categoria.trim(),
+                categoria: aMayusculas(data.categoria.trim()),
                 fecha: data.fecha || new Date(),
                 proyectoId: data.proyectoId || null,
                 montoAbonado,

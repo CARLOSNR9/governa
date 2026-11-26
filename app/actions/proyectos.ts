@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { aMayusculas } from "@/lib/gastos/texto";
 import { normalizarTipo, resumirProyecto, type TipoProyecto } from "@/lib/gastos/proyectos";
 
 export async function getProyectos() {
@@ -39,8 +40,8 @@ export async function createProyecto(data: {
         const tipo = normalizarTipo(data.tipo, data.presupuesto);
         const nuevoProyecto = await prisma.proyecto.create({
             data: {
-                nombre: data.nombre,
-                descripcion: data.descripcion || null,
+                nombre: aMayusculas(data.nombre.trim()),
+                descripcion: data.descripcion ? aMayusculas(data.descripcion.trim()) : null,
                 // Un proyecto de gasto acumulado no tiene valor inicial.
                 presupuesto: tipo === "ACUMULADO" ? 0 : Math.max(data.presupuesto || 0, 0),
                 tipo,
@@ -85,8 +86,8 @@ export async function updateProyecto(id: string, data: {
 }) {
     try {
         const cambios: { nombre?: string; descripcion?: string; presupuesto?: number; tipo?: TipoProyecto } = {
-            nombre: data.nombre,
-            descripcion: data.descripcion,
+            nombre: data.nombre === undefined ? undefined : aMayusculas(data.nombre.trim()),
+            descripcion: data.descripcion === undefined ? undefined : aMayusculas(data.descripcion.trim()),
             presupuesto: data.presupuesto === undefined ? undefined : Math.max(data.presupuesto || 0, 0),
         };
         if (data.tipo !== undefined) {

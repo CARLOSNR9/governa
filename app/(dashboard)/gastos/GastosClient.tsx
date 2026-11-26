@@ -11,6 +11,7 @@ import autoTable from "jspdf-autotable";
 import { createProyecto, deleteProyecto, updateProyecto } from "@/app/actions/proyectos";
 import { FichaProyecto, SelectorTipoProyecto } from "@/components/modules/gastos/Proyectos";
 import type { TipoProyecto } from "@/lib/gastos/proyectos";
+import { aMayusculas } from "@/lib/gastos/texto";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -182,10 +183,10 @@ export default function GastosClient({
     const openEditDialog = (t: any) => {
         setTransaccionToEdit(t);
         setFormData({
-            concepto: t.concepto,
+            concepto: aMayusculas(t.concepto),
             monto: t.monto.toString(),
             tipo: t.tipo,
-            categoria: t.categoria || "",
+            categoria: aMayusculas(t.categoria || ""),
             proyectoId: t.proyectoId || "general",
             fecha: format(new Date(t.fecha), "yyyy-MM-dd"),
         });
@@ -629,7 +630,7 @@ export default function GastosClient({
         };
 
     // Proveedores o lugares ya registrados, para sugerirlos al escribir.
-    const proveedores = Array.from(new Set(initialData.map((t) => (t.categoria || "").trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, "es"));
+    const proveedores = Array.from(new Set(initialData.map((t) => aMayusculas((t.categoria || "").trim())).filter(Boolean))).sort((a, b) => a.localeCompare(b, "es"));
 
     return (
         <div className="space-y-6">
@@ -738,7 +739,7 @@ export default function GastosClient({
                                             <Input
                                                 placeholder="Ej: Minga con la comunidad"
                                                 value={projectData.nombre}
-                                                onChange={(e) => setProjectData({ ...projectData, nombre: e.target.value })}
+                                                onChange={(e) => setProjectData({ ...projectData, nombre: aMayusculas(e.target.value) })}
                                             />
                                         </div>
                                         <div className="space-y-2">
@@ -761,7 +762,7 @@ export default function GastosClient({
                                             <Input
                                                 placeholder="Detalles adicionales..."
                                                 value={projectData.descripcion}
-                                                onChange={(e) => setProjectData({ ...projectData, descripcion: e.target.value })}
+                                                onChange={(e) => setProjectData({ ...projectData, descripcion: aMayusculas(e.target.value) })}
                                             />
                                         </div>
                                     </div>
@@ -892,7 +893,7 @@ export default function GastosClient({
                             <Input
                                 placeholder="Ej: Pago de papelería"
                                 value={formData.concepto}
-                                onChange={(e) => setFormData({ ...formData, concepto: e.target.value })}
+                                onChange={(e) => setFormData({ ...formData, concepto: aMayusculas(e.target.value) })}
                             />
                         </div>
                         <div className="space-y-2">
@@ -913,7 +914,7 @@ export default function GastosClient({
                                 list="proveedores-gastos"
                                 placeholder={formData.tipo === "INGRESO" ? "Ej: Tesorería municipal" : "Ej: Tienda Ortega"}
                                 value={formData.categoria}
-                                onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
+                                onChange={(e) => setFormData({ ...formData, categoria: aMayusculas(e.target.value) })}
                             />
                         </div>
                     </div>
@@ -987,7 +988,7 @@ export default function GastosClient({
                             <Input
                                 placeholder="Ej: Pago de papelería"
                                 value={formData.concepto}
-                                onChange={(e) => setFormData({ ...formData, concepto: e.target.value })}
+                                onChange={(e) => setFormData({ ...formData, concepto: aMayusculas(e.target.value) })}
                             />
                         </div>
                         <div className="space-y-2">
@@ -1008,7 +1009,7 @@ export default function GastosClient({
                                 list="proveedores-gastos"
                                 placeholder={formData.tipo === "INGRESO" ? "Ej: Tesorería municipal" : "Ej: Tienda Ortega"}
                                 value={formData.categoria}
-                                onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
+                                onChange={(e) => setFormData({ ...formData, categoria: aMayusculas(e.target.value) })}
                             />
                         </div>
                     </div>
@@ -1087,7 +1088,7 @@ export default function GastosClient({
                                 <Input
                                     placeholder="Ej: Minga con la comunidad"
                                     value={projectToEdit.nombre}
-                                    onChange={(e) => setProjectToEdit({ ...projectToEdit, nombre: e.target.value })}
+                                    onChange={(e) => setProjectToEdit({ ...projectToEdit, nombre: aMayusculas(e.target.value) })}
                                 />
                             </div>
                             <div className="space-y-2">
@@ -1110,7 +1111,7 @@ export default function GastosClient({
                                 <Input
                                     placeholder="Detalles adicionales..."
                                     value={projectToEdit.descripcion || ""}
-                                    onChange={(e) => setProjectToEdit({ ...projectToEdit, descripcion: e.target.value })}
+                                    onChange={(e) => setProjectToEdit({ ...projectToEdit, descripcion: aMayusculas(e.target.value) })}
                                 />
                             </div>
                         </div>
